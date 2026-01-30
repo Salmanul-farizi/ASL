@@ -64,15 +64,13 @@ const PublicNews: React.FC<PublicNewsProps> = ({ isAdmin = false }) => {
       <div className="flex items-center justify-between px-2">
         <h2 className="sports-font text-2xl font-black text-white">Latest Feed</h2>
         <div className="flex gap-3 items-center">
-          {(isAdmin || true) && (
-            <button
-              onClick={() => setShowUpload(true)}
-              className="w-10 h-10 rounded-full bg-[#D6FF32]/10 hover:bg-[#D6FF32]/20 flex items-center justify-center border border-[#D6FF32]/20 hover:border-[#D6FF32]/40 transition-all"
-              title="Upload story"
-            >
-              <i className="fa-solid fa-plus text-[#D6FF32]"></i>
-            </button>
-          )}
+          <button
+            onClick={() => setShowUpload(true)}
+            className="w-10 h-10 rounded-full bg-[#D6FF32]/10 hover:bg-[#D6FF32]/20 flex items-center justify-center border border-[#D6FF32]/20 hover:border-[#D6FF32]/40 transition-all"
+            title="Upload story"
+          >
+            <i className="fa-solid fa-plus text-[#D6FF32]"></i>
+          </button>
           <div className="w-10 h-10 rounded-full bg-[#D6FF32]/10 flex items-center justify-center border border-[#D6FF32]/20">
              <i className="fa-solid fa-rss text-[#D6FF32]"></i>
           </div>

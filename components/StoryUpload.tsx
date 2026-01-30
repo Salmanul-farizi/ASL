@@ -27,7 +27,7 @@ const StoryUpload: React.FC<StoryUploadProps> = ({ isAdmin, onUpload, onClose })
   };
 
   const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const selectedFiles = Array.from(e.target.files || []);
+    const selectedFiles = Array.from(e.target.files || []) as File[];
     setError('');
     
     const limits = getMaxFiles();
