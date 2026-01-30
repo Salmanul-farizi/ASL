@@ -1,5 +1,13 @@
-import React, { useState, useRef } from 'react';
-import { MEDIA_LIMITS, formatFileSize, validateVideoDuration, getVideoDuration } from '../constants/mediaLimits';
+import React, { useState, useRef, useEffect } from 'react';
+import { 
+  MEDIA_LIMITS, 
+  formatFileSize, 
+  validateVideoDuration, 
+  getVideoDuration,
+  getUserUploadCount,
+  saveUserUploadCount,
+  getRemainingUploads
+} from '../constants/mediaLimits';
 import { MediaStory } from '../types';
 
 interface StoryUploadProps {
@@ -14,82 +22,231 @@ const StoryUpload: React.FC<StoryUploadProps> = ({ isAdmin, onUpload, onClose })
   const [caption, setCaption] = useState('');
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState('');
+  const [remaining, setRemaining] = useState(getRemainingUploads());
+  
+  // Camera state
+  const [showCamera, setShowCamera] = useState(false);
+  const [cameraMode, setCameraMode] = useState<'photo' | 'video'>('photo');
+  const [isRecording, setIsRecording] = useState(false);
+  const [recordingTime, setRecordingTime] = useState(0);
+  const [cameraError, setCameraError] = useState('');
+  
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const streamRef = useRef<MediaStream | null>(null);
+  const chunksRef = useRef<Blob[]>([]);
+  const timerRef = useRef<NodeJS.Timeout | null>(null);
 
-  const getMaxFiles = () => {
-    if (isAdmin) return { images: Infinity, videos: Infinity };
-    return { images: MEDIA_LIMITS.MAX_IMAGES_PER_UPLOAD, videos: MEDIA_LIMITS.MAX_VIDEOS_PER_UPLOAD };
+  useEffect(() => {
+    setRemaining(getRemainingUploads());
+  }, [files]);
+
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      stopCamera();
+      if (timerRef.current) clearInterval(timerRef.current);
+    };
+  }, []);
+
+  const getCurrentCounts = () => {
+    const imageCount = files.filter(f => f.type.startsWith('image')).length;
+    const videoCount = files.filter(f => f.type.startsWith('video')).length;
+    return { imageCount, videoCount };
   };
 
-  const getMaxSize = (type: 'image' | 'video') => {
-    if (isAdmin) return Infinity;
-    return type === 'image' ? MEDIA_LIMITS.MAX_IMAGE_SIZE : MEDIA_LIMITS.MAX_VIDEO_SIZE;
+  const canAddMore = (type: 'image' | 'video') => {
+    if (isAdmin) return true;
+    const { imageCount, videoCount } = getCurrentCounts();
+    const userCounts = getUserUploadCount();
+    
+    if (type === 'image') {
+      return (userCounts.images + imageCount) < MEDIA_LIMITS.PUBLIC_MAX_IMAGES_TOTAL;
+    }
+    return (userCounts.videos + videoCount) < MEDIA_LIMITS.PUBLIC_MAX_VIDEOS_TOTAL;
   };
 
   const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const selectedFiles = Array.from(e.target.files || []) as File[];
     setError('');
     
-    const limits = getMaxFiles();
-    let imageCount = files.filter(f => f.type.startsWith('image')).length;
-    let videoCount = files.filter(f => f.type.startsWith('video')).length;
-
-    const newFiles: File[] = [];
-    const newPreviews: { url: string; type: 'image' | 'video'; duration?: number }[] = [];
-
     for (const file of selectedFiles) {
       if (file.type.startsWith('image')) {
-        // Image validation
-        if (imageCount >= limits.images) {
-          setError(`Max ${limits.images} images allowed`);
+        if (!canAddMore('image')) {
+          setError(`You've reached your image limit (${MEDIA_LIMITS.PUBLIC_MAX_IMAGES_TOTAL} total)`);
           continue;
         }
-        if (file.size > getMaxSize('image')) {
-          setError(`Image too large. Max ${formatFileSize(getMaxSize('image'))}`);
+        if (file.size > MEDIA_LIMITS.MAX_IMAGE_SIZE) {
+          setError(`Image too large. Max ${formatFileSize(MEDIA_LIMITS.MAX_IMAGE_SIZE)}`);
           continue;
         }
-        imageCount++;
         const reader = new FileReader();
         reader.onloadend = () => {
-          newPreviews.push({ url: reader.result as string, type: 'image' });
-          if (newPreviews.length === newFiles.length) setPreviews(prev => [...prev, ...newPreviews]);
+          setPreviews(prev => [...prev, { url: reader.result as string, type: 'image' }]);
         };
         reader.readAsDataURL(file);
-        newFiles.push(file);
+        setFiles(prev => [...prev, file]);
       } else if (file.type.startsWith('video')) {
-        // Video validation
-        if (videoCount >= limits.videos) {
-          setError(`Max ${limits.videos} videos allowed`);
+        if (!canAddMore('video')) {
+          setError(`You've reached your video limit (${MEDIA_LIMITS.PUBLIC_MAX_VIDEOS_TOTAL} total)`);
           continue;
         }
-        if (file.size > getMaxSize('video')) {
-          setError(`Video too large. Max ${formatFileSize(getMaxSize('video'))}`);
+        if (file.size > MEDIA_LIMITS.MAX_VIDEO_SIZE) {
+          setError(`Video too large. Max ${formatFileSize(MEDIA_LIMITS.MAX_VIDEO_SIZE)}`);
           continue;
         }
         const isValid = await validateVideoDuration(file);
         if (!isValid) {
-          setError('Video exceeds 30 second limit');
+          setError(`Video exceeds ${MEDIA_LIMITS.MAX_VIDEO_DURATION} second limit`);
           continue;
         }
-        videoCount++;
         const duration = await getVideoDuration(file);
         const reader = new FileReader();
         reader.onloadend = () => {
-          newPreviews.push({ url: reader.result as string, type: 'video', duration });
-          if (newPreviews.length === newFiles.length) setPreviews(prev => [...prev, ...newPreviews]);
+          setPreviews(prev => [...prev, { url: reader.result as string, type: 'video', duration }]);
         };
         reader.readAsDataURL(file);
-        newFiles.push(file);
+        setFiles(prev => [...prev, file]);
       }
     }
 
-    setFiles(prev => [...prev, ...newFiles]);
     if (fileInputRef.current) fileInputRef.current.value = '';
   };
 
   const removeFile = (index: number) => {
     setFiles(prev => prev.filter((_, i) => i !== index));
     setPreviews(prev => prev.filter((_, i) => i !== index));
+  };
+
+  // Camera functions
+  const startCamera = async (mode: 'photo' | 'video') => {
+    try {
+      setCameraError('');
+      const constraints = {
+        video: { facingMode: 'environment', width: { ideal: 1280 }, height: { ideal: 720 } },
+        audio: mode === 'video'
+      };
+      
+      const stream = await navigator.mediaDevices.getUserMedia(constraints);
+      streamRef.current = stream;
+      
+      if (videoRef.current) {
+        videoRef.current.srcObject = stream;
+        videoRef.current.play();
+      }
+      
+      setCameraMode(mode);
+      setShowCamera(true);
+    } catch (err) {
+      console.error('Camera error:', err);
+      setCameraError('Camera access denied. Please allow camera permission.');
+    }
+  };
+
+  const stopCamera = () => {
+    if (streamRef.current) {
+      streamRef.current.getTracks().forEach(track => track.stop());
+      streamRef.current = null;
+    }
+    if (mediaRecorderRef.current && isRecording) {
+      mediaRecorderRef.current.stop();
+    }
+    if (timerRef.current) {
+      clearInterval(timerRef.current);
+      timerRef.current = null;
+    }
+    setShowCamera(false);
+    setIsRecording(false);
+    setRecordingTime(0);
+  };
+
+  const capturePhoto = () => {
+    if (!videoRef.current || !canAddMore('image')) {
+      if (!canAddMore('image')) setError(`You've reached your image limit`);
+      return;
+    }
+
+    const canvas = document.createElement('canvas');
+    canvas.width = videoRef.current.videoWidth;
+    canvas.height = videoRef.current.videoHeight;
+    const ctx = canvas.getContext('2d');
+    ctx?.drawImage(videoRef.current, 0, 0);
+    
+    canvas.toBlob((blob) => {
+      if (blob) {
+        const file = new File([blob], `photo_${Date.now()}.jpg`, { type: 'image/jpeg' });
+        setFiles(prev => [...prev, file]);
+        
+        const reader = new FileReader();
+        reader.onloadend = () => {
+          setPreviews(prev => [...prev, { url: reader.result as string, type: 'image' }]);
+        };
+        reader.readAsDataURL(blob);
+      }
+    }, 'image/jpeg', 0.9);
+
+    stopCamera();
+  };
+
+  const startRecording = () => {
+    if (!streamRef.current || !canAddMore('video')) {
+      if (!canAddMore('video')) setError(`You've reached your video limit`);
+      return;
+    }
+
+    chunksRef.current = [];
+    const mediaRecorder = new MediaRecorder(streamRef.current, { mimeType: 'video/webm' });
+    mediaRecorderRef.current = mediaRecorder;
+
+    mediaRecorder.ondataavailable = (e) => {
+      if (e.data.size > 0) {
+        chunksRef.current.push(e.data);
+      }
+    };
+
+    mediaRecorder.onstop = () => {
+      const blob = new Blob(chunksRef.current, { type: 'video/webm' });
+      const file = new File([blob], `video_${Date.now()}.webm`, { type: 'video/webm' });
+      
+      setFiles(prev => [...prev, file]);
+      
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setPreviews(prev => [...prev, { url: reader.result as string, type: 'video', duration: recordingTime }]);
+      };
+      reader.readAsDataURL(blob);
+
+      stopCamera();
+    };
+
+    mediaRecorder.start();
+    setIsRecording(true);
+    setRecordingTime(0);
+
+    // Start timer
+    timerRef.current = setInterval(() => {
+      setRecordingTime(prev => {
+        if (prev >= MEDIA_LIMITS.MAX_VIDEO_DURATION - 1) {
+          // Auto-stop at 30 seconds
+          if (mediaRecorderRef.current) {
+            mediaRecorderRef.current.stop();
+          }
+          return prev + 1;
+        }
+        return prev + 1;
+      });
+    }, 1000);
+  };
+
+  const stopRecording = () => {
+    if (mediaRecorderRef.current && isRecording) {
+      mediaRecorderRef.current.stop();
+    }
+    if (timerRef.current) {
+      clearInterval(timerRef.current);
+      timerRef.current = null;
+    }
   };
 
   const handleUpload = async () => {
@@ -103,8 +260,9 @@ const StoryUpload: React.FC<StoryUploadProps> = ({ isAdmin, onUpload, onClose })
     const now = new Date();
     const expiresAt = new Date(now.getTime() + MEDIA_LIMITS.STORY_EXPIRY_HOURS * 60 * 60 * 1000);
 
+    const { imageCount, videoCount } = getCurrentCounts();
+
     for (let i = 0; i < files.length; i++) {
-      const file = files[i];
       const preview = previews[i];
       const id = `story_${Date.now()}_${i}`;
 
@@ -122,6 +280,15 @@ const StoryUpload: React.FC<StoryUploadProps> = ({ isAdmin, onUpload, onClose })
       stories.push(story);
     }
 
+    // Update global upload count for public users
+    if (!isAdmin) {
+      const currentCounts = getUserUploadCount();
+      saveUserUploadCount(
+        currentCounts.images + imageCount,
+        currentCounts.videos + videoCount
+      );
+    }
+
     onUpload(stories);
     setFiles([]);
     setPreviews([]);
@@ -130,125 +297,238 @@ const StoryUpload: React.FC<StoryUploadProps> = ({ isAdmin, onUpload, onClose })
     onClose();
   };
 
+  const userCounts = getUserUploadCount();
+  const { imageCount, videoCount } = getCurrentCounts();
+  const totalImagesAfter = userCounts.images + imageCount;
+  const totalVideosAfter = userCounts.videos + videoCount;
+
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-      <div className="glass-card rounded-3xl w-full max-w-2xl max-h-[90vh] overflow-y-auto p-6 space-y-6">
-        {/* Header */}
-        <div className="flex items-center justify-between">
-          <h2 className="sports-font text-2xl font-black text-white">Upload Story</h2>
-          <button onClick={onClose} className="text-white/50 hover:text-white text-2xl">
-            <i className="fa-solid fa-xmark"></i>
-          </button>
-        </div>
+    <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4">
+      {/* Camera View */}
+      {showCamera ? (
+        <div className="bg-black rounded-3xl w-full max-w-lg overflow-hidden">
+          <div className="relative">
+            <video
+              ref={videoRef}
+              autoPlay
+              playsInline
+              muted
+              className="w-full aspect-[3/4] object-cover"
+            />
+            
+            {/* Recording timer */}
+            {isRecording && (
+              <div className="absolute top-4 left-1/2 -translate-x-1/2 bg-red-600 text-white px-4 py-2 rounded-full flex items-center gap-2">
+                <span className="w-3 h-3 bg-white rounded-full animate-pulse"></span>
+                <span className="font-bold">{recordingTime}s / {MEDIA_LIMITS.MAX_VIDEO_DURATION}s</span>
+              </div>
+            )}
 
-        {/* Upload Area */}
-        <div className="border-2 border-dashed border-[#D6FF32]/30 rounded-2xl p-8 text-center cursor-pointer hover:border-[#D6FF32]/60 transition-all"
-          onClick={() => fileInputRef.current?.click()}>
-          <i className="fa-solid fa-cloud-arrow-up text-4xl text-[#D6FF32]/40 mb-3"></i>
-          <p className="text-white font-bold mb-1">Click to upload or drag files</p>
-          <p className="text-white/50 text-sm">
-            {isAdmin ? 'Unlimited files' : `Max ${MEDIA_LIMITS.MAX_IMAGES_PER_UPLOAD} images, ${MEDIA_LIMITS.MAX_VIDEOS_PER_UPLOAD} videos`}
-          </p>
-          <input
-            ref={fileInputRef}
-            type="file"
-            multiple
-            accept="image/*,video/*"
-            onChange={handleFileSelect}
-            className="hidden"
-          />
-        </div>
-
-        {/* Error Message */}
-        {error && (
-          <div className="bg-red-500/10 border border-red-500/30 rounded-xl p-4 text-red-400 text-sm flex items-center gap-2">
-            <i className="fa-solid fa-triangle-exclamation flex-shrink-0"></i>
-            {error}
-          </div>
-        )}
-
-        {/* Previews */}
-        {previews.length > 0 && (
-          <div className="space-y-3">
-            <h3 className="text-white/80 text-sm font-bold">Selected Files ({previews.length})</h3>
-            <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-              {previews.map((preview, idx) => (
-                <div key={idx} className="relative group">
-                  <div className="aspect-square rounded-lg overflow-hidden bg-slate-800">
-                    {preview.type === 'image' ? (
-                      <img src={preview.url} alt="" className="w-full h-full object-cover" />
-                    ) : (
-                      <>
-                        <video src={preview.url} className="w-full h-full object-cover" />
-                        <div className="absolute inset-0 bg-black/40 flex items-center justify-center">
-                          <i className="fa-solid fa-play text-white text-2xl"></i>
-                        </div>
-                        {preview.duration && (
-                          <div className="absolute bottom-1 right-1 bg-black/80 text-white text-xs px-2 py-1 rounded">
-                            {Math.floor(preview.duration)}s
-                          </div>
-                        )}
-                      </>
-                    )}
-                  </div>
-                  <button
-                    onClick={() => removeFile(idx)}
-                    className="absolute -top-2 -right-2 w-6 h-6 bg-red-500 rounded-full flex items-center justify-center text-white text-xs opacity-0 group-hover:opacity-100 transition-opacity"
-                  >
-                    <i className="fa-solid fa-xmark"></i>
-                  </button>
-                </div>
-              ))}
+            {/* Camera controls */}
+            <div className="absolute bottom-6 left-0 right-0 flex justify-center gap-6">
+              <button
+                onClick={stopCamera}
+                className="w-12 h-12 bg-white/20 backdrop-blur rounded-full flex items-center justify-center text-white"
+              >
+                <i className="fa-solid fa-xmark text-xl"></i>
+              </button>
+              
+              {cameraMode === 'photo' ? (
+                <button
+                  onClick={capturePhoto}
+                  className="w-16 h-16 bg-white rounded-full flex items-center justify-center border-4 border-[#D6FF32]"
+                >
+                  <i className="fa-solid fa-camera text-2xl text-[#280D62]"></i>
+                </button>
+              ) : (
+                <button
+                  onClick={isRecording ? stopRecording : startRecording}
+                  className={`w-16 h-16 rounded-full flex items-center justify-center border-4 ${
+                    isRecording ? 'bg-red-600 border-red-400' : 'bg-white border-[#D6FF32]'
+                  }`}
+                >
+                  {isRecording ? (
+                    <i className="fa-solid fa-stop text-2xl text-white"></i>
+                  ) : (
+                    <i className="fa-solid fa-video text-2xl text-[#280D62]"></i>
+                  )}
+                </button>
+              )}
+              
+              <button
+                onClick={() => setCameraMode(cameraMode === 'photo' ? 'video' : 'photo')}
+                className="w-12 h-12 bg-white/20 backdrop-blur rounded-full flex items-center justify-center text-white"
+                disabled={isRecording}
+              >
+                <i className={`fa-solid ${cameraMode === 'photo' ? 'fa-video' : 'fa-camera'} text-lg`}></i>
+              </button>
             </div>
           </div>
-        )}
-
-        {/* Caption */}
-        <div>
-          <label className="block text-sm font-bold text-white/80 mb-2">Caption (Optional)</label>
-          <textarea
-            value={caption}
-            onChange={e => setCaption(e.target.value)}
-            placeholder="Add a caption to your story..."
-            className="w-full bg-slate-800/50 border border-slate-700 rounded-xl px-4 py-3 text-white text-sm focus:outline-none focus:ring-2 focus:ring-[#D6FF32]/50 resize-none"
-            rows={3}
-          />
         </div>
+      ) : (
+        /* Upload Modal */
+        <div className="glass-card rounded-3xl w-full max-w-2xl max-h-[90vh] overflow-y-auto p-6 space-y-6">
+          {/* Header */}
+          <div className="flex items-center justify-between">
+            <h2 className="sports-font text-2xl font-black text-white">Upload Story</h2>
+            <button onClick={onClose} className="text-white/50 hover:text-white text-2xl">
+              <i className="fa-solid fa-xmark"></i>
+            </button>
+          </div>
 
-        {/* Actions */}
-        <div className="flex gap-3">
-          <button
-            onClick={onClose}
-            className="flex-1 bg-slate-800/50 hover:bg-slate-800 text-white font-bold py-3 rounded-xl transition-all"
+          {/* Global Limits Info (for public users) */}
+          {!isAdmin && (
+            <div className="bg-[#D6FF32]/10 border border-[#D6FF32]/30 rounded-xl p-4">
+              <p className="text-[#D6FF32] text-sm font-bold mb-2">Your Upload Quota</p>
+              <div className="flex gap-6 text-sm">
+                <div>
+                  <span className="text-white/60">Images: </span>
+                  <span className={`font-bold ${totalImagesAfter >= MEDIA_LIMITS.PUBLIC_MAX_IMAGES_TOTAL ? 'text-red-400' : 'text-white'}`}>
+                    {totalImagesAfter}/{MEDIA_LIMITS.PUBLIC_MAX_IMAGES_TOTAL}
+                  </span>
+                </div>
+                <div>
+                  <span className="text-white/60">Videos: </span>
+                  <span className={`font-bold ${totalVideosAfter >= MEDIA_LIMITS.PUBLIC_MAX_VIDEOS_TOTAL ? 'text-red-400' : 'text-white'}`}>
+                    {totalVideosAfter}/{MEDIA_LIMITS.PUBLIC_MAX_VIDEOS_TOTAL}
+                  </span>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Camera & Upload Buttons */}
+          <div className="grid grid-cols-2 gap-3">
+            <button
+              onClick={() => startCamera('photo')}
+              disabled={!canAddMore('image')}
+              className="flex items-center justify-center gap-2 bg-[#D6FF32]/10 hover:bg-[#D6FF32]/20 border border-[#D6FF32]/30 rounded-xl py-4 text-[#D6FF32] font-bold transition-all disabled:opacity-40 disabled:cursor-not-allowed"
+            >
+              <i className="fa-solid fa-camera"></i>
+              Take Photo
+            </button>
+            <button
+              onClick={() => startCamera('video')}
+              disabled={!canAddMore('video')}
+              className="flex items-center justify-center gap-2 bg-red-500/10 hover:bg-red-500/20 border border-red-500/30 rounded-xl py-4 text-red-400 font-bold transition-all disabled:opacity-40 disabled:cursor-not-allowed"
+            >
+              <i className="fa-solid fa-video"></i>
+              Record Video
+            </button>
+          </div>
+
+          {/* Upload Area */}
+          <div 
+            className="border-2 border-dashed border-white/20 rounded-2xl p-8 text-center cursor-pointer hover:border-[#D6FF32]/40 transition-all"
+            onClick={() => fileInputRef.current?.click()}
           >
-            Cancel
-          </button>
-          <button
-            onClick={handleUpload}
-            disabled={uploading || files.length === 0}
-            className="flex-1 bg-gradient-to-r from-[#D6FF32] to-[#b8e01f] text-[#280D62] font-bold py-3 rounded-xl hover:shadow-lg hover:shadow-[#D6FF32]/30 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
-          >
-            {uploading ? (
-              <>
-                <i className="fa-solid fa-spinner animate-spin mr-2"></i>
-                Uploading...
-              </>
-            ) : (
-              <>
-                <i className="fa-solid fa-arrow-up mr-2"></i>
-                Upload ({files.length})
-              </>
-            )}
-          </button>
-        </div>
+            <i className="fa-solid fa-cloud-arrow-up text-4xl text-white/30 mb-3"></i>
+            <p className="text-white font-bold mb-1">Or upload from gallery</p>
+            <p className="text-white/50 text-sm">
+              {isAdmin ? 'Unlimited uploads' : `${remaining.images} images, ${remaining.videos} videos remaining`}
+            </p>
+            <input
+              ref={fileInputRef}
+              type="file"
+              multiple
+              accept="image/*,video/*"
+              onChange={handleFileSelect}
+              className="hidden"
+            />
+          </div>
 
-        {/* Info */}
-        <div className="text-xs text-white/40 space-y-1 border-t border-white/10 pt-4">
-          <p>• Images: Max 2MB each</p>
-          <p>• Videos: Max 10MB, 30 seconds</p>
-          <p>• Stories expire after 24 hours</p>
+          {/* Error Message */}
+          {(error || cameraError) && (
+            <div className="bg-red-500/10 border border-red-500/30 rounded-xl p-4 text-red-400 text-sm flex items-center gap-2">
+              <i className="fa-solid fa-triangle-exclamation flex-shrink-0"></i>
+              {error || cameraError}
+            </div>
+          )}
+
+          {/* Previews */}
+          {previews.length > 0 && (
+            <div className="space-y-3">
+              <h3 className="text-white/80 text-sm font-bold">Selected ({previews.length})</h3>
+              <div className="grid grid-cols-3 gap-3">
+                {previews.map((preview, idx) => (
+                  <div key={idx} className="relative group">
+                    <div className="aspect-square rounded-lg overflow-hidden bg-slate-800">
+                      {preview.type === 'image' ? (
+                        <img src={preview.url} alt="" className="w-full h-full object-cover" />
+                      ) : (
+                        <>
+                          <video src={preview.url} className="w-full h-full object-cover" />
+                          <div className="absolute inset-0 bg-black/40 flex items-center justify-center">
+                            <i className="fa-solid fa-play text-white text-xl"></i>
+                          </div>
+                          {preview.duration && (
+                            <div className="absolute bottom-1 right-1 bg-black/80 text-white text-xs px-2 py-1 rounded">
+                              {Math.floor(preview.duration)}s
+                            </div>
+                          )}
+                        </>
+                      )}
+                    </div>
+                    <button
+                      onClick={() => removeFile(idx)}
+                      className="absolute -top-2 -right-2 w-6 h-6 bg-red-500 rounded-full flex items-center justify-center text-white text-xs opacity-0 group-hover:opacity-100 transition-opacity"
+                    >
+                      <i className="fa-solid fa-xmark"></i>
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Caption */}
+          <div>
+            <label className="block text-sm font-bold text-white/80 mb-2">Caption (Optional)</label>
+            <textarea
+              value={caption}
+              onChange={e => setCaption(e.target.value)}
+              placeholder="Add a caption..."
+              className="w-full bg-slate-800/50 border border-slate-700 rounded-xl px-4 py-3 text-white text-sm focus:outline-none focus:ring-2 focus:ring-[#D6FF32]/50 resize-none"
+              rows={2}
+            />
+          </div>
+
+          {/* Actions */}
+          <div className="flex gap-3">
+            <button
+              onClick={onClose}
+              className="flex-1 bg-slate-800/50 hover:bg-slate-800 text-white font-bold py-3 rounded-xl transition-all"
+            >
+              Cancel
+            </button>
+            <button
+              onClick={handleUpload}
+              disabled={uploading || files.length === 0}
+              className="flex-1 bg-gradient-to-r from-[#D6FF32] to-[#b8e01f] text-[#280D62] font-bold py-3 rounded-xl hover:shadow-lg hover:shadow-[#D6FF32]/30 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+            >
+              {uploading ? (
+                <>
+                  <i className="fa-solid fa-spinner animate-spin mr-2"></i>
+                  Uploading...
+                </>
+              ) : (
+                <>
+                  <i className="fa-solid fa-arrow-up mr-2"></i>
+                  Upload ({files.length})
+                </>
+              )}
+            </button>
+          </div>
+
+          {/* Info */}
+          <div className="text-xs text-white/40 space-y-1 border-t border-white/10 pt-4">
+            <p>• Images: Max 2MB each</p>
+            <p>• Videos: Max 10MB, {MEDIA_LIMITS.MAX_VIDEO_DURATION} seconds</p>
+            <p>• Stories expire after 24 hours</p>
+            {!isAdmin && <p>• Public limit: {MEDIA_LIMITS.PUBLIC_MAX_IMAGES_TOTAL} images, {MEDIA_LIMITS.PUBLIC_MAX_VIDEOS_TOTAL} videos total</p>}
+          </div>
         </div>
-      </div>
+      )}
     </div>
   );
 };

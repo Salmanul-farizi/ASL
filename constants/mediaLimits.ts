@@ -1,8 +1,8 @@
 // Media upload limits configuration
 export const MEDIA_LIMITS = {
-  // Per Upload Session
-  MAX_IMAGES_PER_UPLOAD: 5,
-  MAX_VIDEOS_PER_UPLOAD: 2,
+  // GLOBAL limits for public users (lifetime total)
+  PUBLIC_MAX_IMAGES_TOTAL: 5,           // 5 images total
+  PUBLIC_MAX_VIDEOS_TOTAL: 2,           // 2 videos total
   
   // File Sizes (in bytes)
   MAX_IMAGE_SIZE: 2 * 1024 * 1024,      // 2MB
@@ -16,6 +16,39 @@ export const MEDIA_LIMITS = {
   STORY_EXPIRY_HOURS: 24,               // Stories expire after 24h
   MAX_TOTAL_STORAGE: 100 * 1024 * 1024, // 100MB total storage
 } as const;
+
+// Storage key for tracking user uploads
+export const USER_UPLOAD_KEY = 'asl_user_uploads';
+
+// Get user's upload count from localStorage
+export const getUserUploadCount = (): { images: number; videos: number } => {
+  const data = localStorage.getItem(USER_UPLOAD_KEY);
+  if (!data) return { images: 0, videos: 0 };
+  return JSON.parse(data);
+};
+
+// Save user's upload count to localStorage
+export const saveUserUploadCount = (images: number, videos: number) => {
+  localStorage.setItem(USER_UPLOAD_KEY, JSON.stringify({ images, videos }));
+};
+
+// Check if user can upload more
+export const canUserUpload = (type: 'image' | 'video'): boolean => {
+  const counts = getUserUploadCount();
+  if (type === 'image') {
+    return counts.images < MEDIA_LIMITS.PUBLIC_MAX_IMAGES_TOTAL;
+  }
+  return counts.videos < MEDIA_LIMITS.PUBLIC_MAX_VIDEOS_TOTAL;
+};
+
+// Get remaining uploads
+export const getRemainingUploads = (): { images: number; videos: number } => {
+  const counts = getUserUploadCount();
+  return {
+    images: Math.max(0, MEDIA_LIMITS.PUBLIC_MAX_IMAGES_TOTAL - counts.images),
+    videos: Math.max(0, MEDIA_LIMITS.PUBLIC_MAX_VIDEOS_TOTAL - counts.videos)
+  };
+};
 
 // Helper to format file size
 export const formatFileSize = (bytes: number): string => {
