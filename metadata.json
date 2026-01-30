@@ -1,0 +1,7 @@
+{
+  "name": "ArenaX - Internal Sports Management PWA",
+  "description": "A comprehensive sports tournament management PWA for internal company events, featuring live scoring, fixture management, and public real-time standings.",
+  "requestFramePermissions": [
+    "camera"
+  ]
+}
