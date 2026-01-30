@@ -263,31 +263,50 @@ const AdminDashboard: React.FC = () => {
               </div>
             </div>
 
-            <div className="grid grid-cols-2 gap-2">
-              <input
-                type="text"
-                placeholder="Tournament Name"
-                value={formData.name}
-                onChange={e => setFormData({ ...formData, name: e.target.value })}
-                className="bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-xs"
-              />
-              <select
-                value={formData.type}
-                onChange={e => setFormData({ ...formData, type: e.target.value as TournamentType })}
-                className="bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-xs"
-              >
-                {TOURNAMENT_TYPES.map(t => <option key={t} value={t}>{t}</option>)}
-              </select>
+
+            <div className="space-y-2">
+              <div className="grid grid-cols-2 gap-2">
+                <input
+                  type="text"
+                  placeholder="Tournament Name"
+                  value={formData.name}
+                  onChange={e => setFormData({ ...formData, name: e.target.value })}
+                  className="bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-xs"
+                />
+                <select
+                  value={formData.type}
+                  onChange={e => setFormData({ ...formData, type: e.target.value as TournamentType })}
+                  className="bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-xs"
+                >
+                  {TOURNAMENT_TYPES.map(t => <option key={t} value={t}>{t}</option>)}
+                </select>
+              </div>
               <input
                 type="text"
                 placeholder="Location"
                 value={formData.location}
                 onChange={e => setFormData({ ...formData, location: e.target.value })}
-                className="bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-xs"
+                className="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-xs"
               />
-              <div className="flex gap-1">
-                <input type="date" value={formData.startDate} onChange={e => setFormData({ ...formData, startDate: e.target.value })} className="flex-1 bg-slate-800 border border-slate-700 rounded-lg px-2 py-2 text-xs" />
-                <input type="date" value={formData.endDate} onChange={e => setFormData({ ...formData, endDate: e.target.value })} className="flex-1 bg-slate-800 border border-slate-700 rounded-lg px-2 py-2 text-xs" />
+              <div className="grid grid-cols-2 gap-2">
+                <div>
+                  <label className="block text-[9px] text-slate-500 mb-1">Start Date</label>
+                  <input
+                    type="date"
+                    value={formData.startDate}
+                    onChange={e => setFormData({ ...formData, startDate: e.target.value })}
+                    className="w-full bg-slate-800 border border-slate-700 rounded-lg px-2 py-2 text-xs"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[9px] text-slate-500 mb-1">End Date</label>
+                  <input
+                    type="date"
+                    value={formData.endDate}
+                    onChange={e => setFormData({ ...formData, endDate: e.target.value })}
+                    className="w-full bg-slate-800 border border-slate-700 rounded-lg px-2 py-2 text-xs"
+                  />
+                </div>
               </div>
             </div>
 
