@@ -58,16 +58,16 @@ const AdminTeams: React.FC = () => {
 
   const handleAddPlayerToTeam = () => {
     if (!newPlayerForm.name) return;
-    
+
     const newPlayer: Player = {
       id: `p_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`,
       name: newPlayerForm.name,
       position: newPlayerForm.position,
       jerseyNumber: newPlayerForm.jerseyNumber || 0,
       mobile: newPlayerForm.mobile || '',
-      photo: newPlayerForm.photo || `https://ui-avatars.com/api/?name=${encodeURIComponent(newPlayerForm.name)}&background=D6FF32&color=280D62&size=200&bold=true`
+      photo: newPlayerForm.photo || `https://ui-avatars.com/api/?name=${encodeURIComponent(newPlayerForm.name)}&background=D6FF32&color=280D62&size=200&bold=true&rounded=true`
     };
-    
+
     setTeamPlayers([...teamPlayers, newPlayer]);
     setNewPlayerForm({ name: '', position: PlayingPosition.FORWARD, jerseyNumber: 1, mobile: '', photo: '' });
     setShowAddPlayer(false);
@@ -75,8 +75,8 @@ const AdminTeams: React.FC = () => {
 
   const handleRemovePlayerFromTeam = (playerId: string) => {
     setTeamPlayers(teamPlayers.filter(p => p.id !== playerId));
-    if (formData.captainId === playerId) setFormData({...formData, captainId: ''});
-    if (formData.managerId === playerId) setFormData({...formData, managerId: ''});
+    if (formData.captainId === playerId) setFormData({ ...formData, captainId: '' });
+    if (formData.managerId === playerId) setFormData({ ...formData, managerId: '' });
   };
 
   const handleSave = () => {
@@ -84,31 +84,31 @@ const AdminTeams: React.FC = () => {
       alert('Please enter team name and add at least one player');
       return;
     }
-    
+
     // Save all new players to the global players list
     const allPlayers = dataStore.getPlayers();
     const existingPlayerIds = allPlayers.map(p => p.id);
     const newPlayersToSave = teamPlayers.filter(p => !existingPlayerIds.includes(p.id));
-    
+
     if (newPlayersToSave.length > 0) {
       const updatedPlayers = [...allPlayers, ...newPlayersToSave];
       dataStore.savePlayers(updatedPlayers);
       setPlayers(updatedPlayers);
     }
-    
+
     const playerIds = teamPlayers.map(p => p.id);
-    
+
     if (editingTeam) {
-      const updated = teams.map(t => 
-        t.id === editingTeam.id 
-          ? { 
-              ...t, 
-              name: formData.name!, 
-              logo: formData.logo || 'https://picsum.photos/200',
-              captainId: formData.captainId || playerIds[0],
-              managerId: formData.managerId || playerIds[0],
-              playerIds: playerIds
-            }
+      const updated = teams.map(t =>
+        t.id === editingTeam.id
+          ? {
+            ...t,
+            name: formData.name!,
+            logo: formData.logo || 'https://picsum.photos/200',
+            captainId: formData.captainId || playerIds[0],
+            managerId: formData.managerId || playerIds[0],
+            playerIds: playerIds
+          }
           : t
       );
       dataStore.saveTeams(updated);
@@ -142,28 +142,27 @@ const AdminTeams: React.FC = () => {
     const newTeams: Team[] = [];
     const newPlayers: Player[] = [];
     const errors: string[] = [];
-    
+
     // Check for header - skip only if it looks like a CSV header (contains multiple column names)
     const firstLine = lines[0].toLowerCase();
-    const isHeader = (firstLine.includes('team') && firstLine.includes('name') && firstLine.includes('position')) || 
-                     (firstLine.includes('player') && firstLine.includes('jersey'));
+    const isHeader = (firstLine.includes('team') && firstLine.includes('name') && firstLine.includes('position')) ||
+      (firstLine.includes('player') && firstLine.includes('jersey'));
     const startIndex = isHeader ? 1 : 0;
-    
+
     let currentTeamName = '';
     let currentTeamPlayers: Player[] = [];
     let currentTeamLogo = '';
-    
+
     for (let i = startIndex; i < lines.length; i++) {
       const line = lines[i].trim();
       if (!line) {
         // Empty line = end of current team
         if (currentTeamName && currentTeamPlayers.length > 0) {
           const teamId = `t_${Date.now()}_${newTeams.length}`;
-          currentTeamPlayers.forEach(p => p.teamId = teamId);
           newTeams.push({
             id: teamId,
             name: currentTeamName,
-            logo: currentTeamLogo || `https://ui-avatars.com/api/?name=${encodeURIComponent(currentTeamName)}&background=280D62&color=D6FF32&size=200&bold=true`,
+            logo: currentTeamLogo || `https://ui-avatars.com/api/?name=${encodeURIComponent(currentTeamName)}&background=280D62&color=D6FF32&size=200&bold=true&rounded=true`,
             captainId: currentTeamPlayers[0]?.id || '',
             managerId: currentTeamPlayers[0]?.id || '',
             playerIds: currentTeamPlayers.map(p => p.id)
@@ -175,19 +174,18 @@ const AdminTeams: React.FC = () => {
         currentTeamLogo = '';
         continue;
       }
-      
+
       const parts = line.split(',').map(p => p.trim());
-      
+
       // Check if this is a team line (starts with TEAM: or has only 1-2 parts as team name)
       if (parts[0].toUpperCase().startsWith('TEAM:')) {
         // Save previous team if exists
         if (currentTeamName && currentTeamPlayers.length > 0) {
           const teamId = `t_${Date.now()}_${newTeams.length}`;
-          currentTeamPlayers.forEach(p => p.teamId = teamId);
           newTeams.push({
             id: teamId,
             name: currentTeamName,
-            logo: currentTeamLogo || `https://ui-avatars.com/api/?name=${encodeURIComponent(currentTeamName)}&background=280D62&color=D6FF32&size=200&bold=true`,
+            logo: currentTeamLogo || `https://ui-avatars.com/api/?name=${encodeURIComponent(currentTeamName)}&background=280D62&color=D6FF32&size=200&bold=true&rounded=true`,
             captainId: currentTeamPlayers[0]?.id || '',
             managerId: currentTeamPlayers[0]?.id || '',
             playerIds: currentTeamPlayers.map(p => p.id)
@@ -201,11 +199,10 @@ const AdminTeams: React.FC = () => {
         // This is a team name line (simple format)
         if (currentTeamName && currentTeamPlayers.length > 0) {
           const teamId = `t_${Date.now()}_${newTeams.length}`;
-          currentTeamPlayers.forEach(p => p.teamId = teamId);
           newTeams.push({
             id: teamId,
             name: currentTeamName,
-            logo: currentTeamLogo || `https://ui-avatars.com/api/?name=${encodeURIComponent(currentTeamName)}&background=280D62&color=D6FF32&size=200&bold=true`,
+            logo: currentTeamLogo || `https://ui-avatars.com/api/?name=${encodeURIComponent(currentTeamName)}&background=280D62&color=D6FF32&size=200&bold=true&rounded=true`,
             captainId: currentTeamPlayers[0]?.id || '',
             managerId: currentTeamPlayers[0]?.id || '',
             playerIds: currentTeamPlayers.map(p => p.id)
@@ -222,7 +219,7 @@ const AdminTeams: React.FC = () => {
           errors.push(`Line ${i + 1}: Missing player name`);
           continue;
         }
-        
+
         // Parse position
         let position = PlayingPosition.FORWARD;
         if (posStr) {
@@ -232,47 +229,46 @@ const AdminTeams: React.FC = () => {
           else if (posUpper === 'MID' || posUpper === 'MIDFIELDER') position = PlayingPosition.MIDFIELDER;
           else if (posUpper === 'FWD' || posUpper === 'FORWARD') position = PlayingPosition.FORWARD;
         }
-        
+
         const player: Player = {
           id: `p_${Date.now()}_${newPlayers.length + currentTeamPlayers.length}`,
           name: name,
           position: position,
           jerseyNumber: parseInt(jerseyStr) || currentTeamPlayers.length + 1,
           mobile: mobile || '',
-          photo: `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=D6FF32&color=280D62&size=200&bold=true`
+          photo: `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=D6FF32&color=280D62&size=200&bold=true&rounded=true`
         };
         currentTeamPlayers.push(player);
       } else {
         errors.push(`Line ${i + 1}: No team defined for player "${parts[0]}"`);
       }
     }
-    
+
     // Save last team
     if (currentTeamName && currentTeamPlayers.length > 0) {
       const teamId = `t_${Date.now()}_${newTeams.length}`;
-      currentTeamPlayers.forEach(p => p.teamId = teamId);
       newTeams.push({
         id: teamId,
         name: currentTeamName,
-        logo: currentTeamLogo || `https://ui-avatars.com/api/?name=${encodeURIComponent(currentTeamName)}&background=280D62&color=D6FF32&size=200&bold=true`,
+        logo: currentTeamLogo || `https://ui-avatars.com/api/?name=${encodeURIComponent(currentTeamName)}&background=280D62&color=D6FF32&size=200&bold=true&rounded=true`,
         captainId: currentTeamPlayers[0]?.id || '',
         managerId: currentTeamPlayers[0]?.id || '',
         playerIds: currentTeamPlayers.map(p => p.id)
       });
       newPlayers.push(...currentTeamPlayers);
     }
-    
+
     if (newTeams.length > 0) {
       // Save teams
       const updatedTeams = [...teams, ...newTeams];
       dataStore.saveTeams(updatedTeams);
       setTeams(updatedTeams);
-      
+
       // Save players
       const updatedPlayers = [...players, ...newPlayers];
       dataStore.savePlayers(updatedPlayers);
       setPlayers(updatedPlayers);
-      
+
       setShowBulkImport(false);
       const errorMsg = errors.length > 0 ? `\n\nWarnings:\n${errors.slice(0, 5).join('\n')}` : '';
       alert(`Successfully imported ${newTeams.length} teams with ${newPlayers.length} players!${errorMsg}`);
@@ -286,14 +282,14 @@ const AdminTeams: React.FC = () => {
       <div className="flex items-center justify-between">
         <h2 className="text-2xl sports-font font-bold uppercase italic">Team Registration</h2>
         <div className="flex gap-2 flex-shrink-0">
-          <button 
+          <button
             onClick={() => setShowBulkImport(true)}
             className="bg-emerald-600 text-white px-3 py-1.5 rounded-lg font-bold text-xs flex items-center gap-1.5 hover:bg-emerald-700 transition-all active:scale-95 shadow-lg shadow-emerald-500/20"
           >
             <i className="fa-solid fa-file-import text-[10px]"></i>
             <span className="hidden sm:inline">Import</span> CSV
           </button>
-          <button 
+          <button
             onClick={() => { if (isAdding) resetForm(); else setIsAdding(true); }}
             className="bg-blue-600 text-white px-3 py-1.5 rounded-lg font-bold text-xs flex items-center gap-1.5 hover:bg-blue-700 transition-all active:scale-95 shadow-lg shadow-blue-500/20"
           >
@@ -313,11 +309,11 @@ const AdminTeams: React.FC = () => {
                 <i className="fa-solid fa-xmark text-xl"></i>
               </button>
             </div>
-            
+
             <div className="bg-slate-800/50 rounded-xl p-4 mb-4">
               <p className="text-sm text-slate-300 mb-2"><strong>CSV Format:</strong></p>
               <pre className="text-xs bg-slate-900 p-3 rounded-lg overflow-x-auto text-slate-400">
-{`TEAM: Red Reign
+                {`TEAM: Red Reign
 John Smith, GK, 1, 0501234567
 Mike Johnson, DEF, 4
 David Lee, MID, 8
@@ -330,18 +326,18 @@ James Miller, MID, 10
 Ryan Taylor, FWD, 11`}
               </pre>
               <p className="text-xs text-slate-500 mt-2">
-                • Use "TEAM: Name" to start each team<br/>
-                • Players: Name, Position (GK/DEF/MID/FWD), Jersey#, Mobile (optional)<br/>
+                • Use "TEAM: Name" to start each team<br />
+                • Players: Name, Position (GK/DEF/MID/FWD), Jersey#, Mobile (optional)<br />
                 • Blank line between teams (optional)
               </p>
             </div>
-            
+
             <textarea
               id="bulkImportText"
               className="w-full h-64 bg-slate-800/50 border border-slate-700 rounded-xl p-4 text-sm font-mono focus:ring-2 focus:ring-emerald-500 outline-none"
               placeholder="Paste your CSV data here..."
             />
-            
+
             <div className="flex gap-3 mt-4">
               <button
                 onClick={() => {
@@ -367,7 +363,7 @@ Ryan Taylor, FWD, 11`}
       {isAdding && (
         <div className="glass-card p-6 rounded-3xl animate-in fade-in zoom-in duration-200">
           <h3 className="text-lg font-bold text-[#D6FF32] mb-4">{editingTeam ? 'Edit Team' : 'New Team Registration'}</h3>
-          
+
           {/* Team Details */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
             {/* Logo Upload */}
@@ -391,8 +387,8 @@ Ryan Taylor, FWD, 11`}
                 )}
                 <label className="absolute -bottom-2 -right-2 w-8 h-8 bg-[#D6FF32] rounded-full flex items-center justify-center cursor-pointer hover:bg-[#e8ff66] transition-all shadow-lg">
                   <i className="fa-solid fa-camera text-[#280D62] text-sm"></i>
-                  <input 
-                    type="file" 
+                  <input
+                    type="file"
                     accept="image/*"
                     className="hidden"
                     onChange={e => {
@@ -400,7 +396,7 @@ Ryan Taylor, FWD, 11`}
                       if (file) {
                         const reader = new FileReader();
                         reader.onloadend = () => {
-                          setFormData({...formData, logo: reader.result as string});
+                          setFormData({ ...formData, logo: reader.result as string });
                         };
                         reader.readAsDataURL(file);
                       }
@@ -410,24 +406,24 @@ Ryan Taylor, FWD, 11`}
               </div>
               <p className="text-[10px] text-slate-500 mt-2">Click to upload</p>
             </div>
-            
+
             <div className="md:col-span-2 space-y-4">
               <div>
                 <label className="block text-sm font-medium text-slate-400 mb-1">Team Name *</label>
-                <input 
-                  type="text" 
+                <input
+                  type="text"
                   value={formData.name}
-                  onChange={e => setFormData({...formData, name: e.target.value})}
+                  onChange={e => setFormData({ ...formData, name: e.target.value })}
                   className="w-full bg-slate-800/50 border border-slate-700 rounded-xl px-4 py-3 focus:ring-2 focus:ring-blue-500 outline-none"
                   placeholder="E.g. Engineering Titans"
                 />
               </div>
               <div>
                 <label className="block text-sm font-medium text-slate-400 mb-1">Or paste Logo URL</label>
-                <input 
-                  type="text" 
+                <input
+                  type="text"
                   value={formData.logo?.startsWith('data:') ? '' : formData.logo}
-                  onChange={e => setFormData({...formData, logo: e.target.value})}
+                  onChange={e => setFormData({ ...formData, logo: e.target.value })}
                   className="w-full bg-slate-800/50 border border-slate-700 rounded-xl px-4 py-3 focus:ring-2 focus:ring-blue-500 outline-none text-sm"
                   placeholder="https://example.com/logo.png"
                 />
@@ -468,15 +464,15 @@ Ryan Taylor, FWD, 11`}
                       </div>
                       <label className="absolute -bottom-1 -right-1 w-6 h-6 bg-[#D6FF32] rounded-full flex items-center justify-center cursor-pointer hover:bg-[#e8ff66]">
                         <i className="fa-solid fa-camera text-[#280D62] text-[10px]"></i>
-                        <input 
-                          type="file" 
+                        <input
+                          type="file"
                           accept="image/*"
                           className="hidden"
                           onChange={e => {
                             const file = e.target.files?.[0];
                             if (file) {
                               const reader = new FileReader();
-                              reader.onloadend = () => setNewPlayerForm({...newPlayerForm, photo: reader.result as string});
+                              reader.onloadend = () => setNewPlayerForm({ ...newPlayerForm, photo: reader.result as string });
                               reader.readAsDataURL(file);
                             }
                           }}
@@ -489,19 +485,19 @@ Ryan Taylor, FWD, 11`}
                   <div className="flex-1 grid grid-cols-2 md:grid-cols-4 gap-3">
                     <div>
                       <label className="block text-xs font-medium text-slate-400 mb-1">Player Name *</label>
-                      <input 
-                        type="text" 
+                      <input
+                        type="text"
                         value={newPlayerForm.name}
-                        onChange={e => setNewPlayerForm({...newPlayerForm, name: e.target.value})}
+                        onChange={e => setNewPlayerForm({ ...newPlayerForm, name: e.target.value })}
                         className="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-[#D6FF32] outline-none"
                         placeholder="Full name"
                       />
                     </div>
                     <div>
                       <label className="block text-xs font-medium text-slate-400 mb-1">Position</label>
-                      <select 
+                      <select
                         value={newPlayerForm.position}
-                        onChange={e => setNewPlayerForm({...newPlayerForm, position: e.target.value as PlayingPosition})}
+                        onChange={e => setNewPlayerForm({ ...newPlayerForm, position: e.target.value as PlayingPosition })}
                         className="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm"
                       >
                         {POSITIONS.map(pos => <option key={pos} value={pos}>{pos}</option>)}
@@ -509,27 +505,27 @@ Ryan Taylor, FWD, 11`}
                     </div>
                     <div>
                       <label className="block text-xs font-medium text-slate-400 mb-1">Jersey #</label>
-                      <input 
-                        type="number" 
+                      <input
+                        type="number"
                         value={newPlayerForm.jerseyNumber}
-                        onChange={e => setNewPlayerForm({...newPlayerForm, jerseyNumber: parseInt(e.target.value) || 0})}
+                        onChange={e => setNewPlayerForm({ ...newPlayerForm, jerseyNumber: parseInt(e.target.value) || 0 })}
                         className="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm"
                         min="1" max="99"
                       />
                     </div>
                     <div>
                       <label className="block text-xs font-medium text-slate-400 mb-1">Mobile</label>
-                      <input 
-                        type="text" 
+                      <input
+                        type="text"
                         value={newPlayerForm.mobile}
-                        onChange={e => setNewPlayerForm({...newPlayerForm, mobile: e.target.value})}
+                        onChange={e => setNewPlayerForm({ ...newPlayerForm, mobile: e.target.value })}
                         className="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm"
                         placeholder="Phone number"
                       />
                     </div>
                   </div>
                 </div>
-                <button 
+                <button
                   onClick={handleAddPlayerToTeam}
                   className="mt-3 bg-green-600 text-white px-4 py-2 rounded-lg font-bold text-sm hover:bg-green-700 transition-all w-full"
                 >
@@ -573,9 +569,9 @@ Ryan Taylor, FWD, 11`}
             <div className="grid grid-cols-2 gap-4 mt-6 pt-6 border-t border-slate-800">
               <div>
                 <label className="block text-sm font-medium text-slate-400 mb-1">Team Captain</label>
-                <select 
+                <select
                   value={formData.captainId}
-                  onChange={e => setFormData({...formData, captainId: e.target.value})}
+                  onChange={e => setFormData({ ...formData, captainId: e.target.value })}
                   className="w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-2 text-sm"
                 >
                   <option value="">Select Captain</option>
@@ -584,9 +580,9 @@ Ryan Taylor, FWD, 11`}
               </div>
               <div>
                 <label className="block text-sm font-medium text-slate-400 mb-1">Team Manager</label>
-                <select 
+                <select
                   value={formData.managerId}
-                  onChange={e => setFormData({...formData, managerId: e.target.value})}
+                  onChange={e => setFormData({ ...formData, managerId: e.target.value })}
                   className="w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-2 text-sm"
                 >
                   <option value="">Select Manager</option>
@@ -596,7 +592,7 @@ Ryan Taylor, FWD, 11`}
             </div>
           )}
 
-          <button 
+          <button
             onClick={handleSave}
             disabled={!formData.name || teamPlayers.length === 0}
             className="w-full mt-8 bg-green-600 text-white font-bold py-4 rounded-2xl shadow-xl hover:bg-green-700 transition-all uppercase tracking-widest sports-font text-lg disabled:opacity-50 disabled:cursor-not-allowed"
