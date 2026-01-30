@@ -1,14 +1,22 @@
 
 import React, { useState, useEffect } from 'react';
 import { dataStore } from '../services/dataStore';
-import { NewsPost } from '../types';
+import { NewsPost, MediaStory } from '../types';
+import StoryUpload from './StoryUpload';
 
-const PublicNews: React.FC = () => {
+interface PublicNewsProps {
+  isAdmin?: boolean;
+}
+
+const PublicNews: React.FC<PublicNewsProps> = ({ isAdmin = false }) => {
   const [posts, setPosts] = useState<NewsPost[]>([]);
+  const [stories, setStories] = useState<MediaStory[]>([]);
   const [likedPosts, setLikedPosts] = useState<Set<string>>(new Set());
+  const [showUpload, setShowUpload] = useState(false);
 
   useEffect(() => {
     setPosts(dataStore.getNews());
+    setStories(dataStore.getMediaStories());
   }, []);
 
   const handleLike = (postId: string) => {
@@ -44,14 +52,64 @@ const PublicNews: React.FC = () => {
     return 'Just now';
   };
 
+  const handleUploadStories = (uploadedStories: MediaStory[]) => {
+    for (const story of uploadedStories) {
+      dataStore.addMediaStory(story);
+    }
+    setStories(dataStore.getMediaStories());
+  };
+
   return (
     <div className="space-y-8 pb-10">
       <div className="flex items-center justify-between px-2">
         <h2 className="sports-font text-2xl font-black text-white">Latest Feed</h2>
-        <div className="w-10 h-10 rounded-full bg-[#D6FF32]/10 flex items-center justify-center border border-[#D6FF32]/20">
-           <i className="fa-solid fa-rss text-[#D6FF32]"></i>
+        <div className="flex gap-3 items-center">
+          {(isAdmin || true) && (
+            <button
+              onClick={() => setShowUpload(true)}
+              className="w-10 h-10 rounded-full bg-[#D6FF32]/10 hover:bg-[#D6FF32]/20 flex items-center justify-center border border-[#D6FF32]/20 hover:border-[#D6FF32]/40 transition-all"
+              title="Upload story"
+            >
+              <i className="fa-solid fa-plus text-[#D6FF32]"></i>
+            </button>
+          )}
+          <div className="w-10 h-10 rounded-full bg-[#D6FF32]/10 flex items-center justify-center border border-[#D6FF32]/20">
+             <i className="fa-solid fa-rss text-[#D6FF32]"></i>
+          </div>
         </div>
       </div>
+
+      {/* Stories Strip */}
+      {stories.length > 0 && (
+        <div className="flex gap-3 overflow-x-auto pb-4 px-2 scrollbar-hide">
+          {stories.map((story) => (
+            <div
+              key={story.id}
+              className="flex-shrink-0 w-20 h-28 rounded-2xl overflow-hidden cursor-pointer group relative hover:ring-2 hover:ring-[#D6FF32] transition-all"
+            >
+              {story.type === 'image' ? (
+                <img src={story.mediaUrl} alt="" className="w-full h-full object-cover group-hover:scale-110 transition-transform" />
+              ) : (
+                <>
+                  <video src={story.mediaUrl} className="w-full h-full object-cover group-hover:scale-110 transition-transform" />
+                  <div className="absolute inset-0 bg-black/30 flex items-center justify-center">
+                    <i className="fa-solid fa-play text-white text-sm"></i>
+                  </div>
+                </>
+              )}
+              <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent"></div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {showUpload && (
+        <StoryUpload
+          isAdmin={isAdmin}
+          onUpload={handleUploadStories}
+          onClose={() => setShowUpload(false)}
+        />
+      )}
 
       <div className="space-y-8">
         {posts.length === 0 ? (

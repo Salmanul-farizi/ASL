@@ -63,7 +63,7 @@ const App: React.FC = () => {
         case 'home': return <PublicHome onTeamClick={navigateToTeam} />;
         case 'fixtures': return <PublicFixtures />;
         case 'table': return <PublicTable />;
-        case 'news': return <PublicNews />;
+        case 'news': return <PublicNews isAdmin={false} />;
         case 'admin-login': return <Login onLogin={handleLogin} />;
         default: return <PublicHome onTeamClick={navigateToTeam} />;
       }

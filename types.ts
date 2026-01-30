@@ -88,3 +88,16 @@ export interface NewsPost {
   createdAt: string;
   likes: number;
 }
+
+export interface MediaStory {
+  id: string;
+  type: 'image' | 'video';
+  mediaUrl: string;  // Base64 data URL
+  thumbnail?: string;  // For videos
+  duration?: number;  // Video duration in seconds
+  caption?: string;
+  uploader: string;  // 'admin' or username
+  createdAt: string;
+  expiresAt: string;  // ISO string for 24h expiry
+  matchId?: string;  // Optional link to match
+}

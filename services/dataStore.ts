@@ -1,5 +1,5 @@
 
-import { Player, Team, Tournament, Match, Goal, MatchStatus, PlayingPosition, TournamentType, NewsPost } from '../types';
+import { Player, Team, Tournament, Match, Goal, MatchStatus, PlayingPosition, TournamentType, NewsPost, MediaStory } from '../types';
 
 const STORAGE_KEYS = {
   PLAYERS: 'asl_players',
@@ -8,7 +8,8 @@ const STORAGE_KEYS = {
   MATCHES: 'asl_matches',
   GOALS: 'asl_goals',
   ADMIN_AUTH: 'asl_admin_auth',
-  NEWS: 'asl_news'
+  NEWS: 'asl_news',
+  MEDIA_STORIES: 'asl_media_stories'
 };
 
 export const dataStore = {
@@ -29,6 +30,19 @@ export const dataStore = {
 
   getNews: (): NewsPost[] => JSON.parse(localStorage.getItem(STORAGE_KEYS.NEWS) || '[]'),
   saveNews: (news: NewsPost[]) => localStorage.setItem(STORAGE_KEYS.NEWS, JSON.stringify(news)),
+
+  getMediaStories: (): MediaStory[] => {
+    const stories = JSON.parse(localStorage.getItem(STORAGE_KEYS.MEDIA_STORIES) || '[]') as MediaStory[];
+    const now = new Date();
+    // Filter out expired stories
+    return stories.filter(s => new Date(s.expiresAt) > now);
+  },
+  saveMediaStories: (stories: MediaStory[]) => localStorage.setItem(STORAGE_KEYS.MEDIA_STORIES, JSON.stringify(stories)),
+  addMediaStory: (story: MediaStory) => {
+    const stories = dataStore.getMediaStories();
+    stories.unshift(story); // Add to beginning
+    dataStore.saveMediaStories(stories);
+  },
 
   getActiveTournament: (): Tournament | undefined => {
     const tournaments = dataStore.getTournaments();
