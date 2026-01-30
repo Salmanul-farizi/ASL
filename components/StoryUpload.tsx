@@ -123,24 +123,58 @@ const StoryUpload: React.FC<StoryUploadProps> = ({ isAdmin, onUpload, onClose })
   const startCamera = async (mode: 'photo' | 'video') => {
     try {
       setCameraError('');
-      const constraints = {
-        video: { facingMode: 'environment', width: { ideal: 1280 }, height: { ideal: 720 } },
+      
+      // Check if mediaDevices is available
+      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+        setCameraError('Camera not supported on this device/browser. Try uploading from gallery instead.');
+        return;
+      }
+
+      // Try with basic constraints first (iOS friendly)
+      let constraints: MediaStreamConstraints = {
+        video: true,
         audio: mode === 'video'
       };
-      
-      const stream = await navigator.mediaDevices.getUserMedia(constraints);
+
+      // Try to get camera with basic constraints first
+      let stream: MediaStream;
+      try {
+        stream = await navigator.mediaDevices.getUserMedia(constraints);
+      } catch (basicErr) {
+        // If basic fails, try with more specific constraints
+        constraints = {
+          video: { facingMode: { ideal: 'environment' } },
+          audio: mode === 'video'
+        };
+        stream = await navigator.mediaDevices.getUserMedia(constraints);
+      }
+
       streamRef.current = stream;
       
       if (videoRef.current) {
         videoRef.current.srcObject = stream;
-        videoRef.current.play();
+        await videoRef.current.play();
       }
       
       setCameraMode(mode);
       setShowCamera(true);
-    } catch (err) {
+    } catch (err: any) {
       console.error('Camera error:', err);
-      setCameraError('Camera access denied. Please allow camera permission.');
+      
+      // More specific error messages
+      if (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError') {
+        setCameraError('Camera permission denied. Please go to Settings > Safari > Camera and allow access.');
+      } else if (err.name === 'NotFoundError' || err.name === 'DevicesNotFoundError') {
+        setCameraError('No camera found on this device.');
+      } else if (err.name === 'NotReadableError' || err.name === 'TrackStartError') {
+        setCameraError('Camera is in use by another app. Please close other apps using the camera.');
+      } else if (err.name === 'OverconstrainedError') {
+        setCameraError('Camera constraints not supported. Please try again.');
+      } else if (err.name === 'SecurityError') {
+        setCameraError('Camera requires HTTPS. Please use a secure connection.');
+      } else {
+        setCameraError(`Camera error: ${err.message || 'Unknown error'}. Try uploading from gallery.`);
+      }
     }
   };
 
@@ -399,22 +433,35 @@ const StoryUpload: React.FC<StoryUploadProps> = ({ isAdmin, onUpload, onClose })
 
           {/* Camera & Upload Buttons */}
           <div className="grid grid-cols-2 gap-3">
-            <button
-              onClick={() => startCamera('photo')}
-              disabled={!canAddMore('image')}
-              className="flex items-center justify-center gap-2 bg-[#D6FF32]/10 hover:bg-[#D6FF32]/20 border border-[#D6FF32]/30 rounded-xl py-4 text-[#D6FF32] font-bold transition-all disabled:opacity-40 disabled:cursor-not-allowed"
+            {/* Native camera capture for iOS - more reliable */}
+            <label
+              className={`flex items-center justify-center gap-2 bg-[#D6FF32]/10 hover:bg-[#D6FF32]/20 border border-[#D6FF32]/30 rounded-xl py-4 text-[#D6FF32] font-bold transition-all cursor-pointer ${!canAddMore('image') ? 'opacity-40 cursor-not-allowed' : ''}`}
             >
               <i className="fa-solid fa-camera"></i>
               Take Photo
-            </button>
-            <button
-              onClick={() => startCamera('video')}
-              disabled={!canAddMore('video')}
-              className="flex items-center justify-center gap-2 bg-red-500/10 hover:bg-red-500/20 border border-red-500/30 rounded-xl py-4 text-red-400 font-bold transition-all disabled:opacity-40 disabled:cursor-not-allowed"
+              <input
+                type="file"
+                accept="image/*"
+                capture="environment"
+                onChange={handleFileSelect}
+                disabled={!canAddMore('image')}
+                className="hidden"
+              />
+            </label>
+            <label
+              className={`flex items-center justify-center gap-2 bg-red-500/10 hover:bg-red-500/20 border border-red-500/30 rounded-xl py-4 text-red-400 font-bold transition-all cursor-pointer ${!canAddMore('video') ? 'opacity-40 cursor-not-allowed' : ''}`}
             >
               <i className="fa-solid fa-video"></i>
               Record Video
-            </button>
+              <input
+                type="file"
+                accept="video/*"
+                capture="environment"
+                onChange={handleFileSelect}
+                disabled={!canAddMore('video')}
+                className="hidden"
+              />
+            </label>
           </div>
 
           {/* Upload Area */}
