@@ -59,8 +59,8 @@ const PublicFixtures: React.FC = () => {
               </div>
               <div className="flex items-center justify-between gap-2">
                 <div className="flex flex-col items-center gap-3 w-5/12 overflow-hidden">
-                  <div className="w-14 h-14 flex items-center justify-center">
-                    <img src={teamA?.logo} className="max-w-full max-h-full object-contain drop-shadow-lg" alt="" />
+                  <div className="w-14 h-14 rounded-full bg-[#3e2085] flex items-center justify-center overflow-hidden">
+                    <img src={teamA?.logo} className="w-full h-full object-cover" alt="" />
                   </div>
                   <span className="font-black text-[11px] uppercase italic text-white/90 truncate w-full text-center">{teamA?.name}</span>
                 </div>
@@ -73,8 +73,8 @@ const PublicFixtures: React.FC = () => {
                   )}
                 </div>
                 <div className="flex flex-col items-center gap-3 w-5/12 overflow-hidden">
-                  <div className="w-14 h-14 flex items-center justify-center">
-                    <img src={teamB?.logo} className="max-w-full max-h-full object-contain drop-shadow-lg" alt="" />
+                  <div className="w-14 h-14 rounded-full bg-[#3e2085] flex items-center justify-center overflow-hidden">
+                    <img src={teamB?.logo} className="w-full h-full object-cover" alt="" />
                   </div>
                   <span className="font-black text-[11px] uppercase italic text-white/90 truncate w-full text-center">{teamB?.name}</span>
                 </div>

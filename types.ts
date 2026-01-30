@@ -87,6 +87,8 @@ export interface NewsPost {
   caption: string;
   createdAt: string;
   likes: number;
+  creatorId?: string;  // Device ID of the creator (optional for backwards compatibility)
+  uploaderName?: string;  // Optional name of the uploader for tagging
 }
 
 export interface MediaStory {
@@ -96,8 +98,10 @@ export interface MediaStory {
   thumbnail?: string;  // For videos
   duration?: number;  // Video duration in seconds
   caption?: string;
-  uploader: string;  // 'admin' or username
+  uploader: string;  // 'admin' or 'public'
   createdAt: string;
   expiresAt: string;  // ISO string for 24h expiry
   matchId?: string;  // Optional link to match
+  creatorId?: string;  // Device ID of the creator (optional for backwards compatibility)
+  uploaderName?: string;  // Optional name of the uploader for tagging
 }

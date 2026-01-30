@@ -285,20 +285,20 @@ const AdminTeams: React.FC = () => {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <h2 className="text-2xl sports-font font-bold uppercase italic">Team Registration</h2>
-        <div className="flex gap-2">
+        <div className="flex gap-2 flex-shrink-0">
           <button 
             onClick={() => setShowBulkImport(true)}
-            className="bg-emerald-600 text-white px-4 py-2 rounded-xl font-bold flex items-center gap-2 hover:bg-emerald-700 transition-all active:scale-95 shadow-lg shadow-emerald-500/20"
+            className="bg-emerald-600 text-white px-3 py-1.5 rounded-lg font-bold text-xs flex items-center gap-1.5 hover:bg-emerald-700 transition-all active:scale-95 shadow-lg shadow-emerald-500/20"
           >
-            <i className="fa-solid fa-file-import"></i>
-            Import CSV
+            <i className="fa-solid fa-file-import text-[10px]"></i>
+            <span className="hidden sm:inline">Import</span> CSV
           </button>
           <button 
             onClick={() => { if (isAdding) resetForm(); else setIsAdding(true); }}
-            className="bg-blue-600 text-white px-4 py-2 rounded-xl font-bold flex items-center gap-2 hover:bg-blue-700 transition-all active:scale-95 shadow-lg shadow-blue-500/20"
+            className="bg-blue-600 text-white px-3 py-1.5 rounded-lg font-bold text-xs flex items-center gap-1.5 hover:bg-blue-700 transition-all active:scale-95 shadow-lg shadow-blue-500/20"
           >
-            <i className={`fa-solid ${isAdding ? 'fa-xmark' : 'fa-plus'}`}></i>
-            {isAdding ? 'Cancel' : 'Register Team'}
+            <i className={`fa-solid ${isAdding ? 'fa-xmark' : 'fa-plus'} text-[10px]`}></i>
+            {isAdding ? 'Cancel' : <><span className="hidden sm:inline">Register</span> Team</>}
           </button>
         </div>
       </div>
@@ -620,7 +620,9 @@ Ryan Taylor, FWD, 11`}
             return (
               <div key={team.id} className="glass-card p-5 rounded-3xl border border-slate-800 flex items-start gap-5 relative group">
                 {team.logo ? (
-                  <img src={team.logo} alt={team.name} className="w-20 h-20 object-contain shadow-lg" />
+                  <div className="w-20 h-20 rounded-full bg-[#3e2085] flex items-center justify-center overflow-hidden shadow-lg">
+                    <img src={team.logo} alt={team.name} className="w-full h-full object-cover" />
+                  </div>
                 ) : (
                   <div className="w-20 h-20 rounded-full bg-[#D6FF32] flex items-center justify-center shadow-lg">
                     <span className="sports-font text-2xl font-black text-[#280D62]">

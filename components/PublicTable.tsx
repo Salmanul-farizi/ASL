@@ -50,7 +50,7 @@ const PublicTable: React.FC = () => {
     });
 
     return Object.values(table).map(r => ({ ...r, goalDifference: r.goalsFor - r.goalsAgainst }))
-      .sort((a,b) => {
+      .sort((a, b) => {
         if (b.points !== a.points) return b.points - a.points;
         if (b.goalDifference !== a.goalDifference) return b.goalDifference - a.goalDifference;
         return b.goalsFor - a.goalsFor;
@@ -72,7 +72,7 @@ const PublicTable: React.FC = () => {
       team: teams.find(t => t.playerIds.includes(pid))
     }))
     .filter(s => s.player)
-    .sort((a,b) => b.goals - a.goals)
+    .sort((a, b) => b.goals - a.goals)
     .slice(0, 5);
 
   return (
@@ -88,6 +88,9 @@ const PublicTable: React.FC = () => {
                 <th className="px-6 py-4 w-12 text-center">Pos</th>
                 <th className="px-6 py-4">Club</th>
                 <th className="px-6 py-4 text-center">P</th>
+                <th className="px-3 py-4 text-center">W</th>
+                <th className="px-3 py-4 text-center">D</th>
+                <th className="px-3 py-4 text-center">L</th>
                 <th className="px-6 py-4 text-center">GD</th>
                 <th className="px-6 py-4 text-center">Pts</th>
               </tr>
@@ -102,13 +105,16 @@ const PublicTable: React.FC = () => {
                     </td>
                     <td className="px-6 py-5">
                       <div className="flex items-center gap-4">
-                        <div className="w-8 h-8 flex items-center justify-center overflow-visible">
+                        <div className="w-8 h-8 flex items-center justify-center overflow-hidden rounded-full bg-[#3e2085]/50">
                           <img src={team?.logo} className="max-w-full max-h-full object-contain" alt="" />
                         </div>
                         <span className="font-black text-[11px] sports-font text-white/90 truncate">{team?.name}</span>
                       </div>
                     </td>
                     <td className="px-6 py-5 text-center font-black text-white/50 text-xs">{row.played}</td>
+                    <td className="px-3 py-5 text-center font-black text-green-400/70 text-xs">{row.won}</td>
+                    <td className="px-3 py-5 text-center font-black text-white/50 text-xs">{row.drawn}</td>
+                    <td className="px-3 py-5 text-center font-black text-red-400/70 text-xs">{row.lost}</td>
                     <td className="px-6 py-5 text-center font-black text-white/50 text-xs">
                       {row.goalDifference > 0 ? `+${row.goalDifference}` : row.goalDifference}
                     </td>
@@ -124,25 +130,25 @@ const PublicTable: React.FC = () => {
       {/* Top Scorers Section */}
       <section className="space-y-6">
         <div className="flex items-center gap-4 px-2">
-           <h3 className="sports-font text-lg font-black text-[#D6FF32]">Top Scorers</h3>
-           <div className="h-[1px] flex-1 bg-white/10"></div>
+          <h3 className="sports-font text-lg font-black text-[#D6FF32]">Top Scorers</h3>
+          <div className="h-[1px] flex-1 bg-white/10"></div>
         </div>
         <div className="space-y-3">
           {sortedScorers.length > 0 ? sortedScorers.map((s, i) => (
             <div key={s.player?.id} className="glass-card p-4 rounded-3xl border border-white/5 flex items-center gap-4 relative overflow-hidden group">
-               <div className="w-8 sports-font font-black text-xl text-white/10">{i + 1}</div>
-               <img src={s.player?.photo} className="w-12 h-12 rounded-2xl object-cover border border-white/10 shadow-lg" alt="" />
-               <div className="flex-1">
-                  <h4 className="font-black text-sm text-white sports-font">{s.player?.name}</h4>
-                  <div className="flex items-center gap-2 mt-0.5">
-                     <img src={s.team?.logo} className="w-3 h-3 rounded-full" alt="" />
-                     <span className="text-[10px] text-white/40 font-bold uppercase tracking-tighter">{s.team?.name}</span>
-                  </div>
-               </div>
-               <div className="text-right">
-                  <div className="text-2xl sports-font font-black italic text-[#D6FF32]">{s.goals}</div>
-                  <div className="text-[8px] font-black text-white/40 uppercase tracking-widest leading-none">Goals</div>
-               </div>
+              <div className="w-8 sports-font font-black text-xl text-white/10">{i + 1}</div>
+              <img src={s.player?.photo} className="w-12 h-12 rounded-2xl object-cover border border-white/10 shadow-lg" alt="" />
+              <div className="flex-1">
+                <h4 className="font-black text-sm text-white sports-font">{s.player?.name}</h4>
+                <div className="flex items-center gap-2 mt-0.5">
+                  <img src={s.team?.logo} className="w-3 h-3 rounded-full" alt="" />
+                  <span className="text-[10px] text-white/40 font-bold uppercase tracking-tighter">{s.team?.name}</span>
+                </div>
+              </div>
+              <div className="text-right">
+                <div className="text-2xl sports-font font-black italic text-[#D6FF32]">{s.goals}</div>
+                <div className="text-[8px] font-black text-white/40 uppercase tracking-widest leading-none">Goals</div>
+              </div>
             </div>
           )) : (
             <div className="text-center py-10 opacity-30 italic text-xs uppercase font-bold tracking-widest">Awaiting match statistics</div>

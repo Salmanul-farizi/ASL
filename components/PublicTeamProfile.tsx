@@ -32,9 +32,9 @@ const PublicTeamProfile: React.FC<TeamProfileProps> = ({ teamId, onBack }) => {
       </button>
 
       <div className="flex flex-col items-center text-center">
-        <div className="relative mb-8 flex items-center justify-center p-6 bg-white/5 rounded-[3rem] border border-white/10 shadow-2xl">
+        <div className="relative mb-8 w-48 h-48 flex items-center justify-center rounded-full bg-white/5 border border-white/10 shadow-2xl overflow-hidden">
           <div className="absolute inset-0 bg-[#D6FF32]/10 rounded-full blur-[60px] opacity-30"></div>
-          <img src={team.logo} className="w-40 h-40 relative object-contain drop-shadow-[0_20px_30px_rgba(0,0,0,0.5)]" alt={team.name} />
+          <img src={team.logo} className="w-32 h-32 relative object-contain drop-shadow-[0_20px_30px_rgba(0,0,0,0.5)]" alt={team.name} />
         </div>
         <h2 className="sports-font text-5xl font-black uppercase italic text-white tracking-tighter mb-4 leading-none">{team.name}</h2>
         <div className="flex flex-wrap justify-center gap-4 mt-4">
@@ -60,7 +60,7 @@ const PublicTeamProfile: React.FC<TeamProfileProps> = ({ teamId, onBack }) => {
               <div className="relative">
                 <img src={p.photo} className="w-16 h-16 rounded-[1.5rem] object-cover border border-white/10 group-hover:scale-105 transition-transform" alt="" />
                 <div className="absolute -top-2 -right-2 w-8 h-8 bg-[#D6FF32] rounded-lg flex items-center justify-center shadow-lg">
-                   <span className="text-[#280D62] font-black sports-font text-sm">#{p.jerseyNumber}</span>
+                  <span className="text-[#280D62] font-black sports-font text-sm">#{p.jerseyNumber}</span>
                 </div>
               </div>
               <div className="flex-1">
@@ -69,7 +69,7 @@ const PublicTeamProfile: React.FC<TeamProfileProps> = ({ teamId, onBack }) => {
               </div>
             </div>
           )) : (
-             <div className="col-span-full py-20 text-center opacity-20 italic font-black uppercase tracking-widest">No players registered for this club</div>
+            <div className="col-span-full py-20 text-center opacity-20 italic font-black uppercase tracking-widest">No players registered for this club</div>
           )}
         </div>
       </div>

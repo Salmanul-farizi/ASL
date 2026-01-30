@@ -309,7 +309,9 @@ const AdminMatches: React.FC = () => {
           <div className="flex items-center justify-between mb-12">
             <div className="text-center w-1/3">
               {teams.find(t => t.id === liveControlMatch.teamAId)?.logo ? (
-                <img src={teams.find(t => t.id === liveControlMatch.teamAId)?.logo} className="w-20 h-20 mx-auto object-contain mb-4 shadow-xl" alt="" />
+                <div className="w-20 h-20 rounded-full bg-[#3e2085] flex items-center justify-center mx-auto mb-4 shadow-xl overflow-hidden">
+                  <img src={teams.find(t => t.id === liveControlMatch.teamAId)?.logo} className="w-full h-full object-cover" alt="" />
+                </div>
               ) : (
                 <div className="w-20 h-20 rounded-full bg-[#D6FF32] flex items-center justify-center mx-auto mb-4 shadow-xl">
                   <span className="sports-font text-2xl font-black text-[#280D62]">
@@ -326,7 +328,9 @@ const AdminMatches: React.FC = () => {
             </div>
             <div className="text-center w-1/3">
               {teams.find(t => t.id === liveControlMatch.teamBId)?.logo ? (
-                <img src={teams.find(t => t.id === liveControlMatch.teamBId)?.logo} className="w-20 h-20 mx-auto object-contain mb-4 shadow-xl" alt="" />
+                <div className="w-20 h-20 rounded-full bg-[#3e2085] flex items-center justify-center mx-auto mb-4 shadow-xl overflow-hidden">
+                  <img src={teams.find(t => t.id === liveControlMatch.teamBId)?.logo} className="w-full h-full object-cover" alt="" />
+                </div>
               ) : (
                 <div className="w-20 h-20 rounded-full bg-[#D6FF32] flex items-center justify-center mx-auto mb-4 shadow-xl">
                   <span className="sports-font text-2xl font-black text-[#280D62]">

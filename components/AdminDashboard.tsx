@@ -19,8 +19,8 @@ const AdminDashboard: React.FC = () => {
     startDate: '',
     endDate: '',
     location: '',
-    logo: '/logos/logo2.svg',
-    banner: 'https://images.unsplash.com/photo-1508098682722-e99c43a406b2?w=1200&h=400&fit=crop&crop=center&auto=format&q=80',
+    logo: '/logos/favicon.svg',
+    banner: '/images/football.jpg',
     teamIds: [] as string[]
   });
 
@@ -46,7 +46,7 @@ const AdminDashboard: React.FC = () => {
   ];
 
   const resetForm = () => {
-    setFormData({ name: '', type: TournamentType.LEAGUE, startDate: '', endDate: '', location: '', logo: '/logos/logo2.svg', banner: 'https://images.unsplash.com/photo-1508098682722-e99c43a406b2?w=1200&h=400&fit=crop&crop=center&auto=format&q=80', teamIds: [] });
+    setFormData({ name: '', type: TournamentType.LEAGUE, startDate: '', endDate: '', location: '', logo: '/logos/favicon.svg', banner: '/images/football.jpg', teamIds: [] });
     setShowTournamentForm(false);
     setEditingTournament(null);
   };
@@ -69,7 +69,7 @@ const AdminDashboard: React.FC = () => {
   const handleToggleTeam = (teamId: string) => {
     setFormData(prev => ({
       ...prev,
-      teamIds: prev.teamIds.includes(teamId) 
+      teamIds: prev.teamIds.includes(teamId)
         ? prev.teamIds.filter(id => id !== teamId)
         : [...prev.teamIds, teamId]
     }));
@@ -77,10 +77,10 @@ const AdminDashboard: React.FC = () => {
 
   const handleSaveTournament = () => {
     if (!formData.name.trim()) return alert('Tournament name is required');
-    
+
     if (editingTournament) {
-      const updated = tournaments.map(t => 
-        t.id === editingTournament.id 
+      const updated = tournaments.map(t =>
+        t.id === editingTournament.id
           ? { ...t, ...formData }
           : t
       );
@@ -139,7 +139,7 @@ const AdminDashboard: React.FC = () => {
         {stats.map((stat, i) => (
           <div key={i} className="glass-card p-4 rounded-2xl hover:border-[#D6FF32]/40 transition-all group relative overflow-hidden">
             <div className="absolute top-0 right-0 p-3 opacity-5 group-hover:opacity-10 transition-opacity">
-               <i className={`fa-solid ${stat.icon} text-4xl`}></i>
+              <i className={`fa-solid ${stat.icon} text-4xl`}></i>
             </div>
             <div className="w-8 h-8 bg-white/5 rounded-lg flex items-center justify-center mb-3">
               <i className={`fa-solid ${stat.icon} text-sm`} style={{ color: stat.color }}></i>
@@ -157,14 +157,14 @@ const AdminDashboard: React.FC = () => {
             <i className="fa-solid fa-trophy"></i>
             Tournaments
           </h3>
-          <button 
-            onClick={() => { 
+          <button
+            onClick={() => {
               if (showTournamentForm) {
                 resetForm();
               } else {
                 setShowTournamentForm(true);
                 setEditingTournament(null);
-                setFormData({ name: '', type: TournamentType.LEAGUE, startDate: '', endDate: '', location: '', logo: '', banner: 'https://images.unsplash.com/photo-1459865264687-595d652de67e?w=1200&h=400&fit=crop&crop=center&auto=format&q=80', teamIds: [] });
+                setFormData({ name: '', type: TournamentType.LEAGUE, startDate: '', endDate: '', location: '', logo: '', banner: '/images/football.jpg', teamIds: [] });
               }
             }}
             className="bg-[#D6FF32] text-[#280D62] px-3 py-1.5 rounded-lg font-bold flex items-center gap-2 text-xs hover:bg-[#e8ff66] transition-colors"
@@ -187,30 +187,30 @@ const AdminDashboard: React.FC = () => {
                       <i className="fa-solid fa-trophy text-lg text-slate-600"></i>
                     )}
                   </div>
-                  
+
                   {/* Upload Button */}
                   <label className="absolute -bottom-1 -right-1 w-5 h-5 bg-[#D6FF32] rounded-full flex items-center justify-center cursor-pointer hover:bg-[#e8ff66]">
                     <i className="fa-solid fa-camera text-[#280D62] text-[8px]"></i>
-                    <input 
-                      type="file" 
+                    <input
+                      type="file"
                       accept="image/*"
                       className="hidden"
                       onChange={e => {
                         const file = e.target.files?.[0];
                         if (file) {
                           const reader = new FileReader();
-                          reader.onloadend = () => setFormData({...formData, logo: reader.result as string});
+                          reader.onloadend = () => setFormData({ ...formData, logo: reader.result as string });
                           reader.readAsDataURL(file);
                         }
                       }}
                     />
                   </label>
-                  
+
                   {/* Remove Button - only show when there's an image */}
                   {formData.logo && (
                     <button
                       type="button"
-                      onClick={() => setFormData({...formData, logo: '/logos/logo2.svg'})}
+                      onClick={() => setFormData({ ...formData, logo: '/logos/favicon.svg' })}
                       className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 rounded-full flex items-center justify-center cursor-pointer hover:bg-red-600 text-white shadow-lg"
                       title="Reset to default logo"
                     >
@@ -229,30 +229,30 @@ const AdminDashboard: React.FC = () => {
                       <span className="text-slate-600 text-xs">Banner</span>
                     )}
                   </div>
-                  
+
                   {/* Upload Button */}
                   <label className="absolute -bottom-1 -right-1 w-5 h-5 bg-[#D6FF32] rounded-full flex items-center justify-center cursor-pointer hover:bg-[#e8ff66]">
                     <i className="fa-solid fa-image text-[#280D62] text-[8px]"></i>
-                    <input 
-                      type="file" 
+                    <input
+                      type="file"
                       accept="image/*"
                       className="hidden"
                       onChange={e => {
                         const file = e.target.files?.[0];
                         if (file) {
                           const reader = new FileReader();
-                          reader.onloadend = () => setFormData({...formData, banner: reader.result as string});
+                          reader.onloadend = () => setFormData({ ...formData, banner: reader.result as string });
                           reader.readAsDataURL(file);
                         }
                       }}
                     />
                   </label>
-                  
+
                   {/* Remove Button - only show when there's an image */}
                   {formData.banner && (
                     <button
                       type="button"
-                      onClick={() => setFormData({...formData, banner: 'https://images.unsplash.com/photo-1508098682722-e99c43a406b2?w=1200&h=400&fit=crop&crop=center&auto=format&q=80'})}
+                      onClick={() => setFormData({ ...formData, banner: '/images/football.jpg' })}
                       className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 rounded-full flex items-center justify-center cursor-pointer hover:bg-red-600 text-white shadow-lg"
                       title="Reset to default banner"
                     >
@@ -264,30 +264,30 @@ const AdminDashboard: React.FC = () => {
             </div>
 
             <div className="grid grid-cols-2 gap-2">
-              <input 
-                type="text" 
+              <input
+                type="text"
                 placeholder="Tournament Name"
                 value={formData.name}
-                onChange={e => setFormData({...formData, name: e.target.value})}
+                onChange={e => setFormData({ ...formData, name: e.target.value })}
                 className="bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-xs"
               />
-              <select 
+              <select
                 value={formData.type}
-                onChange={e => setFormData({...formData, type: e.target.value as TournamentType})}
+                onChange={e => setFormData({ ...formData, type: e.target.value as TournamentType })}
                 className="bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-xs"
               >
                 {TOURNAMENT_TYPES.map(t => <option key={t} value={t}>{t}</option>)}
               </select>
-              <input 
-                type="text" 
+              <input
+                type="text"
                 placeholder="Location"
                 value={formData.location}
-                onChange={e => setFormData({...formData, location: e.target.value})}
+                onChange={e => setFormData({ ...formData, location: e.target.value })}
                 className="bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-xs"
               />
               <div className="flex gap-1">
-                <input type="date" value={formData.startDate} onChange={e => setFormData({...formData, startDate: e.target.value})} className="flex-1 bg-slate-800 border border-slate-700 rounded-lg px-2 py-2 text-xs" />
-                <input type="date" value={formData.endDate} onChange={e => setFormData({...formData, endDate: e.target.value})} className="flex-1 bg-slate-800 border border-slate-700 rounded-lg px-2 py-2 text-xs" />
+                <input type="date" value={formData.startDate} onChange={e => setFormData({ ...formData, startDate: e.target.value })} className="flex-1 bg-slate-800 border border-slate-700 rounded-lg px-2 py-2 text-xs" />
+                <input type="date" value={formData.endDate} onChange={e => setFormData({ ...formData, endDate: e.target.value })} className="flex-1 bg-slate-800 border border-slate-700 rounded-lg px-2 py-2 text-xs" />
               </div>
             </div>
 
@@ -299,9 +299,8 @@ const AdminDashboard: React.FC = () => {
                     type="button"
                     key={team.id}
                     onClick={() => handleToggleTeam(team.id)}
-                    className={`flex items-center gap-1.5 px-2 py-1 rounded-lg text-[10px] font-bold transition-all ${
-                      formData.teamIds.includes(team.id) ? 'bg-[#D6FF32] text-[#280D62]' : 'bg-slate-700 text-white/60 hover:bg-slate-600'
-                    }`}
+                    className={`flex items-center gap-1.5 px-2 py-1 rounded-lg text-[10px] font-bold transition-all ${formData.teamIds.includes(team.id) ? 'bg-[#D6FF32] text-[#280D62]' : 'bg-slate-700 text-white/60 hover:bg-slate-600'
+                      }`}
                   >
                     {team.logo && <img src={team.logo} className="w-3 h-3 rounded" alt="" />}
                     {team.name}
@@ -311,7 +310,7 @@ const AdminDashboard: React.FC = () => {
               </div>
             </div>
 
-            <button 
+            <button
               onClick={handleSaveTournament}
               className="w-full bg-[#D6FF32] text-[#280D62] py-2 rounded-lg font-bold text-sm hover:bg-[#e8ff66] transition-colors"
             >
@@ -328,9 +327,8 @@ const AdminDashboard: React.FC = () => {
         ) : (
           <div className="space-y-2">
             {tournaments.map(t => (
-              <div key={t.id} className={`flex items-center justify-between p-3 rounded-xl transition-all ${
-                t.isActive ? 'bg-[#D6FF32]/10 border border-[#D6FF32]/30' : 'bg-slate-800/30 border border-white/5 hover:border-white/10'
-              }`}>
+              <div key={t.id} className={`flex items-center justify-between p-3 rounded-xl transition-all ${t.isActive ? 'bg-[#D6FF32]/10 border border-[#D6FF32]/30' : 'bg-slate-800/30 border border-white/5 hover:border-white/10'
+                }`}>
                 <div className="flex items-center gap-3">
                   <div className="w-10 h-10 rounded-lg bg-white/5 p-1.5 flex items-center justify-center">
                     {t.logo ? <img src={t.logo} className="max-w-full max-h-full object-contain" alt="" /> : <i className="fa-solid fa-trophy text-[#D6FF32] text-sm"></i>}
@@ -344,7 +342,7 @@ const AdminDashboard: React.FC = () => {
                   {t.isActive ? (
                     <span className="px-2 py-1 bg-[#D6FF32] text-[#280D62] text-[9px] font-black rounded-md uppercase">Active</span>
                   ) : (
-                    <button 
+                    <button
                       onClick={() => handleActivate(t.id)}
                       className="px-2 py-1 bg-emerald-600 hover:bg-emerald-500 text-white text-[10px] font-bold rounded-md"
                     >
@@ -387,11 +385,10 @@ const AdminDashboard: React.FC = () => {
                   </div>
                   <span className="text-xs font-bold truncate max-w-[180px]">{teamA?.name || '?'} v {teamB?.name || '?'}</span>
                 </div>
-                <span className={`text-[9px] font-black px-2 py-1 rounded-lg uppercase ${
-                  match.status === 'Completed' ? 'bg-white/5 text-white/40' : 
-                  match.status === 'Live' ? 'bg-red-500 text-white animate-pulse' : 
-                  'bg-[#D6FF32]/10 text-[#D6FF32]'
-                }`}>
+                <span className={`text-[9px] font-black px-2 py-1 rounded-lg uppercase ${match.status === 'Completed' ? 'bg-white/5 text-white/40' :
+                  match.status === 'Live' ? 'bg-red-500 text-white animate-pulse' :
+                    'bg-[#D6FF32]/10 text-[#D6FF32]'
+                  }`}>
                   {match.status === 'Completed' ? `${match.scoreA}-${match.scoreB}` : match.status}
                 </span>
               </div>

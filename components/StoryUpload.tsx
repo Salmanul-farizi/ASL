@@ -1,12 +1,13 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { 
-  MEDIA_LIMITS, 
-  formatFileSize, 
-  validateVideoDuration, 
+import {
+  MEDIA_LIMITS,
+  formatFileSize,
+  validateVideoDuration,
   getVideoDuration,
   getUserUploadCount,
   saveUserUploadCount,
-  getRemainingUploads
+  getRemainingUploads,
+  getDeviceId
 } from '../constants/mediaLimits';
 import { MediaStory } from '../types';
 
@@ -14,29 +15,35 @@ interface StoryUploadProps {
   isAdmin: boolean;
   onUpload: (stories: MediaStory[]) => void;
   onClose: () => void;
+  mode?: 'story' | 'post';
 }
 
-const StoryUpload: React.FC<StoryUploadProps> = ({ isAdmin, onUpload, onClose }) => {
+const StoryUpload: React.FC<StoryUploadProps> = ({ isAdmin, onUpload, onClose, mode = 'story' }) => {
   const [files, setFiles] = useState<File[]>([]);
   const [previews, setPreviews] = useState<{ url: string; type: 'image' | 'video'; duration?: number }[]>([]);
   const [caption, setCaption] = useState('');
+  const [uploaderName, setUploaderName] = useState('');
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState('');
   const [remaining, setRemaining] = useState(getRemainingUploads());
-  
+
   // Camera state
   const [showCamera, setShowCamera] = useState(false);
   const [cameraMode, setCameraMode] = useState<'photo' | 'video'>('photo');
   const [isRecording, setIsRecording] = useState(false);
   const [recordingTime, setRecordingTime] = useState(0);
   const [cameraError, setCameraError] = useState('');
-  
+
   const fileInputRef = useRef<HTMLInputElement>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const chunksRef = useRef<Blob[]>([]);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
+
+  const isPostMode = mode === 'post';
+  const titleText = isPostMode ? 'Create Post' : 'Add Story';
+  const buttonText = isPostMode ? 'Post' : 'Share Story';
 
   useEffect(() => {
     setRemaining(getRemainingUploads());
@@ -60,7 +67,7 @@ const StoryUpload: React.FC<StoryUploadProps> = ({ isAdmin, onUpload, onClose })
     if (isAdmin) return true;
     const { imageCount, videoCount } = getCurrentCounts();
     const userCounts = getUserUploadCount();
-    
+
     if (type === 'image') {
       return (userCounts.images + imageCount) < MEDIA_LIMITS.PUBLIC_MAX_IMAGES_TOTAL;
     }
@@ -70,7 +77,7 @@ const StoryUpload: React.FC<StoryUploadProps> = ({ isAdmin, onUpload, onClose })
   const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const selectedFiles = Array.from(e.target.files || []) as File[];
     setError('');
-    
+
     for (const file of selectedFiles) {
       if (file.type.startsWith('image')) {
         if (!canAddMore('image')) {
@@ -123,7 +130,7 @@ const StoryUpload: React.FC<StoryUploadProps> = ({ isAdmin, onUpload, onClose })
   const startCamera = async (mode: 'photo' | 'video') => {
     try {
       setCameraError('');
-      
+
       // Check if mediaDevices is available
       if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
         setCameraError('Camera not supported on this device/browser. Try uploading from gallery instead.');
@@ -150,17 +157,17 @@ const StoryUpload: React.FC<StoryUploadProps> = ({ isAdmin, onUpload, onClose })
       }
 
       streamRef.current = stream;
-      
+
       if (videoRef.current) {
         videoRef.current.srcObject = stream;
         await videoRef.current.play();
       }
-      
+
       setCameraMode(mode);
       setShowCamera(true);
     } catch (err: any) {
       console.error('Camera error:', err);
-      
+
       // More specific error messages
       if (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError') {
         setCameraError('Camera permission denied. Please go to Settings > Safari > Camera and allow access.');
@@ -206,12 +213,12 @@ const StoryUpload: React.FC<StoryUploadProps> = ({ isAdmin, onUpload, onClose })
     canvas.height = videoRef.current.videoHeight;
     const ctx = canvas.getContext('2d');
     ctx?.drawImage(videoRef.current, 0, 0);
-    
+
     canvas.toBlob((blob) => {
       if (blob) {
         const file = new File([blob], `photo_${Date.now()}.jpg`, { type: 'image/jpeg' });
         setFiles(prev => [...prev, file]);
-        
+
         const reader = new FileReader();
         reader.onloadend = () => {
           setPreviews(prev => [...prev, { url: reader.result as string, type: 'image' }]);
@@ -242,9 +249,9 @@ const StoryUpload: React.FC<StoryUploadProps> = ({ isAdmin, onUpload, onClose })
     mediaRecorder.onstop = () => {
       const blob = new Blob(chunksRef.current, { type: 'video/webm' });
       const file = new File([blob], `video_${Date.now()}.webm`, { type: 'video/webm' });
-      
+
       setFiles(prev => [...prev, file]);
-      
+
       const reader = new FileReader();
       reader.onloadend = () => {
         setPreviews(prev => [...prev, { url: reader.result as string, type: 'video', duration: recordingTime }]);
@@ -290,45 +297,96 @@ const StoryUpload: React.FC<StoryUploadProps> = ({ isAdmin, onUpload, onClose })
     }
 
     setUploading(true);
-    const stories: MediaStory[] = [];
-    const now = new Date();
-    const expiresAt = new Date(now.getTime() + MEDIA_LIMITS.STORY_EXPIRY_HOURS * 60 * 60 * 1000);
+    setError('');
 
-    const { imageCount, videoCount } = getCurrentCounts();
+    try {
+      const stories: MediaStory[] = [];
+      const now = new Date();
+      const expiresAt = new Date(now.getTime() + MEDIA_LIMITS.STORY_EXPIRY_HOURS * 60 * 60 * 1000);
 
-    for (let i = 0; i < files.length; i++) {
-      const preview = previews[i];
-      const id = `story_${Date.now()}_${i}`;
+      const { imageCount, videoCount } = getCurrentCounts();
 
-      const story: MediaStory = {
-        id,
-        type: preview.type,
-        mediaUrl: preview.url,
-        duration: preview.duration,
-        caption: caption || undefined,
-        uploader: isAdmin ? 'admin' : 'public',
-        createdAt: now.toISOString(),
-        expiresAt: expiresAt.toISOString(),
+      for (let i = 0; i < files.length; i++) {
+        const file = files[i];
+        const preview = previews[i];
+        const id = `story_${Date.now()}_${i}`;
+
+        // Compress image if it's too large for localStorage
+        let mediaUrl = preview.url;
+        if (preview.type === 'image') {
+          mediaUrl = await compressImage(preview.url, 800, 0.7);
+        }
+
+        const story: MediaStory = {
+          id,
+          type: preview.type,
+          mediaUrl,
+          duration: preview.duration,
+          caption: caption || undefined,
+          uploader: isAdmin ? 'admin' : 'public',
+          createdAt: now.toISOString(),
+          expiresAt: expiresAt.toISOString(),
+          creatorId: getDeviceId(),  // Track who created this content
+          uploaderName: uploaderName.trim() || undefined,  // Optional uploader name for tagging
+        };
+
+        stories.push(story);
+      }
+
+      // Update global upload count for public users
+      if (!isAdmin) {
+        const currentCounts = getUserUploadCount();
+        saveUserUploadCount(
+          currentCounts.images + imageCount,
+          currentCounts.videos + videoCount
+        );
+      }
+
+      onUpload(stories);
+      setFiles([]);
+      setPreviews([]);
+      setCaption('');
+      onClose();
+    } catch (err: any) {
+      if (err.name === 'QuotaExceededError' || err.message?.includes('quota')) {
+        setError('Storage full! Please delete some posts/stories first, or contact admin.');
+      } else {
+        setError(`Upload failed: ${err.message || 'Unknown error'}`);
+      }
+      console.error('Upload error:', err);
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  // Compress image to reduce localStorage usage
+  const compressImage = (base64: string, maxWidth: number, quality: number): Promise<string> => {
+    return new Promise((resolve) => {
+      const img = new Image();
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        let width = img.width;
+        let height = img.height;
+
+        // Scale down if too large
+        if (width > maxWidth) {
+          height = (height * maxWidth) / width;
+          width = maxWidth;
+        }
+
+        canvas.width = width;
+        canvas.height = height;
+
+        const ctx = canvas.getContext('2d');
+        ctx?.drawImage(img, 0, 0, width, height);
+
+        // Convert to compressed JPEG
+        const compressed = canvas.toDataURL('image/jpeg', quality);
+        resolve(compressed);
       };
-
-      stories.push(story);
-    }
-
-    // Update global upload count for public users
-    if (!isAdmin) {
-      const currentCounts = getUserUploadCount();
-      saveUserUploadCount(
-        currentCounts.images + imageCount,
-        currentCounts.videos + videoCount
-      );
-    }
-
-    onUpload(stories);
-    setFiles([]);
-    setPreviews([]);
-    setCaption('');
-    setUploading(false);
-    onClose();
+      img.onerror = () => resolve(base64); // Fallback to original
+      img.src = base64;
+    });
   };
 
   const userCounts = getUserUploadCount();
@@ -349,7 +407,7 @@ const StoryUpload: React.FC<StoryUploadProps> = ({ isAdmin, onUpload, onClose })
               muted
               className="w-full aspect-[3/4] object-cover"
             />
-            
+
             {/* Recording timer */}
             {isRecording && (
               <div className="absolute top-4 left-1/2 -translate-x-1/2 bg-red-600 text-white px-4 py-2 rounded-full flex items-center gap-2">
@@ -366,7 +424,7 @@ const StoryUpload: React.FC<StoryUploadProps> = ({ isAdmin, onUpload, onClose })
               >
                 <i className="fa-solid fa-xmark text-xl"></i>
               </button>
-              
+
               {cameraMode === 'photo' ? (
                 <button
                   onClick={capturePhoto}
@@ -377,9 +435,8 @@ const StoryUpload: React.FC<StoryUploadProps> = ({ isAdmin, onUpload, onClose })
               ) : (
                 <button
                   onClick={isRecording ? stopRecording : startRecording}
-                  className={`w-16 h-16 rounded-full flex items-center justify-center border-4 ${
-                    isRecording ? 'bg-red-600 border-red-400' : 'bg-white border-[#D6FF32]'
-                  }`}
+                  className={`w-16 h-16 rounded-full flex items-center justify-center border-4 ${isRecording ? 'bg-red-600 border-red-400' : 'bg-white border-[#D6FF32]'
+                    }`}
                 >
                   {isRecording ? (
                     <i className="fa-solid fa-stop text-2xl text-white"></i>
@@ -388,7 +445,7 @@ const StoryUpload: React.FC<StoryUploadProps> = ({ isAdmin, onUpload, onClose })
                   )}
                 </button>
               )}
-              
+
               <button
                 onClick={() => setCameraMode(cameraMode === 'photo' ? 'video' : 'photo')}
                 className="w-12 h-12 bg-white/20 backdrop-blur rounded-full flex items-center justify-center text-white"
@@ -404,7 +461,7 @@ const StoryUpload: React.FC<StoryUploadProps> = ({ isAdmin, onUpload, onClose })
         <div className="glass-card rounded-3xl w-full max-w-2xl max-h-[90vh] overflow-y-auto p-6 space-y-6">
           {/* Header */}
           <div className="flex items-center justify-between">
-            <h2 className="sports-font text-2xl font-black text-white">Upload Story</h2>
+            <h2 className="sports-font text-2xl font-black text-white">{titleText}</h2>
             <button onClick={onClose} className="text-white/50 hover:text-white text-2xl">
               <i className="fa-solid fa-xmark"></i>
             </button>
@@ -465,7 +522,7 @@ const StoryUpload: React.FC<StoryUploadProps> = ({ isAdmin, onUpload, onClose })
           </div>
 
           {/* Upload Area */}
-          <div 
+          <div
             className="border-2 border-dashed border-white/20 rounded-2xl p-8 text-center cursor-pointer hover:border-[#D6FF32]/40 transition-all"
             onClick={() => fileInputRef.current?.click()}
           >
@@ -540,6 +597,25 @@ const StoryUpload: React.FC<StoryUploadProps> = ({ isAdmin, onUpload, onClose })
             />
           </div>
 
+          {/* Uploader Name (for tagging) */}
+          {isPostMode && (
+            <div>
+              <label className="block text-sm font-bold text-white/80 mb-2">
+                <i className="fa-solid fa-user-tag mr-2 text-[#D6FF32]"></i>
+                Your Name (Optional)
+              </label>
+              <input
+                type="text"
+                value={uploaderName}
+                onChange={e => setUploaderName(e.target.value)}
+                placeholder="Enter your name to be tagged..."
+                className="w-full bg-slate-800/50 border border-slate-700 rounded-xl px-4 py-3 text-white text-sm focus:outline-none focus:ring-2 focus:ring-[#D6FF32]/50"
+                maxLength={30}
+              />
+              <p className="text-white/40 text-xs mt-1">Others can see who uploaded this post</p>
+            </div>
+          )}
+
           {/* Actions */}
           <div className="flex gap-3">
             <button
@@ -561,7 +637,7 @@ const StoryUpload: React.FC<StoryUploadProps> = ({ isAdmin, onUpload, onClose })
               ) : (
                 <>
                   <i className="fa-solid fa-arrow-up mr-2"></i>
-                  Upload ({files.length})
+                  {buttonText} ({files.length})
                 </>
               )}
             </button>
@@ -569,9 +645,10 @@ const StoryUpload: React.FC<StoryUploadProps> = ({ isAdmin, onUpload, onClose })
 
           {/* Info */}
           <div className="text-xs text-white/40 space-y-1 border-t border-white/10 pt-4">
-            <p>• Images: Max 2MB each</p>
-            <p>• Videos: Max 10MB, {MEDIA_LIMITS.MAX_VIDEO_DURATION} seconds</p>
-            <p>• Stories expire after 24 hours</p>
+            <p>• Images: Max 10MB each</p>
+            <p>• Videos: Max 50MB, {MEDIA_LIMITS.MAX_VIDEO_DURATION} seconds</p>
+            {!isPostMode && <p>• Stories expire after 24 hours</p>}
+            {isPostMode && <p>• Posts are permanent and visible in the feed</p>}
             {!isAdmin && <p>• Public limit: {MEDIA_LIMITS.PUBLIC_MAX_IMAGES_TOTAL} images, {MEDIA_LIMITS.PUBLIC_MAX_VIDEOS_TOTAL} videos total</p>}
           </div>
         </div>
